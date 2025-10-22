@@ -65,15 +65,48 @@ const Login: React.FC = () => {
     setError(null);
 
     try {
-        const { error } = await supabase.auth.verifyOtp({
+        // Step 1: Verify the OTP
+        const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
             email,
             token: otp,
             type: 'signup'
         });
-        if (error) throw error;
+
+        if (verifyError) throw verifyError;
+        if (!session?.user) throw new Error("Verification successful, but no user session found.");
+
+        // Step 2: Poll for the student profile to be created by the trigger
+        setMessage("Verification successful! Finalizing your profile...");
+
+        const user = session.user;
+        let profileFound = false;
+        const maxAttempts = 10; // Poll for 5 seconds (10 * 500ms)
+        for (let i = 0; i < maxAttempts; i++) {
+            const { data: student } = await supabase
+                .from('students')
+                .select('id')
+                .eq('id', user.id)
+                .single();
+
+            if (student) {
+                profileFound = true;
+                break; // Profile found, exit loop
+            }
+            
+            // Wait before the next attempt
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (!profileFound) {
+            throw new Error("Your account was created, but we couldn't find your student profile. Please try logging in or contact an administrator.");
+        }
+        
+        // Step 3: Force a reload to trigger the main App's onAuthStateChange
+        window.location.reload();
+
     } catch(err: any) {
         setError(err.error_description || err.message);
-    } finally {
+        // Don't keep loading on error, let the user try again.
         setLoading(false);
     }
   };
