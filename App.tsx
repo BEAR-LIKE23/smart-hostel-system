@@ -48,6 +48,9 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [userRole, setUserRole] = useState<string | null>(null);
     const [appStatus, setAppStatus] = useState<'loading' | 'ready'>('loading');
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+    const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+        return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    });
 
 
     // Data states
@@ -82,6 +85,19 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [studentSearchTerm, setStudentSearchTerm] = useState('');
     const [complaintSearchTerm, setComplaintSearchTerm] = useState('');
     const [complaintStatusFilter, setComplaintStatusFilter] = useState<'All' | Complaint['status']>('All');
+
+    useEffect(() => {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('theme', theme);
+    }, [theme]);
+
+    const toggleTheme = () => {
+        setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+    };
 
 
     useEffect(() => {
@@ -464,15 +480,15 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                            <input
                                 type="text"
                                 placeholder="Search by name or email..."
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                                 value={studentSearchTerm}
                                 onChange={e => setStudentSearchTerm(e.target.value)}
                             />
-                            <button onClick={handleExportStudents} className="flex-shrink-0 px-4 py-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300">Export</button>
+                            <button onClick={handleExportStudents} className="flex-shrink-0 px-4 py-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">Export</button>
                         </div>
                         <div className="max-h-96 overflow-y-auto">
-                            <table className="w-full text-sm text-left text-gray-500">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
                                     <tr>
                                         <th scope="col" className="px-4 py-3">Name</th>
                                         <th scope="col" className="px-4 py-3">Room</th>
@@ -481,19 +497,19 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                                 </thead>
                                 <tbody>
                                     {filteredStudents.length === 0 && (
-                                        <tr><td colSpan={3} className="text-center py-4 text-gray-500">No students found.</td></tr>
+                                        <tr><td colSpan={3} className="text-center py-4 text-gray-500 dark:text-gray-400">No students found.</td></tr>
                                     )}
                                     {filteredStudents.map(student => (
-                                        <tr key={student.id} className="border-b hover:bg-gray-50">
-                                            <td className="px-4 py-3 font-medium text-gray-900">{student.name}</td>
+                                        <tr key={student.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                            <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{student.name}</td>
                                             <td className="px-4 py-3">{rooms.find(r => r.id === student.room_id)?.room_number || 'Unassigned'}</td>
                                             <td className="px-4 py-3 space-x-2">
                                                 {student.room_id ? (
-                                                    <button onClick={() => handleUnassignRoom(student.id)} className="font-medium text-red-600 hover:underline">Unassign</button>
+                                                    <button onClick={() => handleUnassignRoom(student.id)} className="font-medium text-red-600 dark:text-red-500 hover:underline">Unassign</button>
                                                 ) : (
-                                                    <button onClick={() => handleOpenAssignModal(student)} className="font-medium text-blue-600 hover:underline">Assign</button>
+                                                    <button onClick={() => handleOpenAssignModal(student)} className="font-medium text-blue-600 dark:text-blue-500 hover:underline">Assign</button>
                                                 )}
-                                                <button onClick={() => handleOpenStudentProfile(student)} className="font-medium text-gray-600 hover:underline">View</button>
+                                                <button onClick={() => handleOpenStudentProfile(student)} className="font-medium text-gray-600 dark:text-gray-400 hover:underline">View</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -520,7 +536,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 }
                 
                 const filterButtonClasses = (status: typeof complaintStatusFilter) => 
-                  `px-3 py-1 text-sm font-medium rounded-full transition-colors ${complaintStatusFilter === status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+                  `px-3 py-1 text-sm font-medium rounded-full transition-colors ${complaintStatusFilter === status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500'}`;
 
                 return (
                     <div>
@@ -529,7 +545,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                                 <input
                                     type="text"
                                     placeholder="Search by name, room, or keyword..."
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                                     value={complaintSearchTerm}
                                     onChange={e => setComplaintSearchTerm(e.target.value)}
                                 />
@@ -542,24 +558,24 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                             </div>
                         )}
                         <div className="max-h-96 overflow-y-auto space-y-4">
-                            {complaintsToShow.length === 0 && <p className="text-center text-gray-500">No complaints found.</p>}
+                            {complaintsToShow.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400">No complaints found.</p>}
                             {complaintsToShow.map(complaint => (
-                                <div key={complaint.id} className="p-4 bg-gray-50 rounded-lg">
+                                <div key={complaint.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
                                     <div className="flex justify-between items-start">
                                         <div>
-                                            <p className="font-semibold text-gray-800">{complaint.student_name} (Room {complaint.room_number})</p>
-                                            <p className="text-xs text-gray-500">{new Date(complaint.created_at).toLocaleString()}</p>
+                                            <p className="font-semibold text-gray-800 dark:text-gray-200">{complaint.student_name} (Room {complaint.room_number})</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(complaint.created_at).toLocaleString()}</p>
                                         </div>
-                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${complaint.status === 'Resolved' ? 'bg-green-100 text-green-800' : complaint.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{complaint.status}</span>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${complaint.status === 'Resolved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : complaint.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'}`}>{complaint.status}</span>
                                     </div>
-                                    <p className="mt-2 text-gray-600">{complaint.description}</p>
+                                    <p className="mt-2 text-gray-600 dark:text-gray-300">{complaint.description}</p>
                                     {userRole === 'admin' && (
                                         <div className="mt-3 flex items-center justify-between">
-                                             <button onClick={() => handleOpenStudentProfile(students.find(s => s.id === complaint.student_id)!)} className="text-xs font-medium text-blue-600 hover:underline">View Student Profile</button>
+                                             <button onClick={() => handleOpenStudentProfile(students.find(s => s.id === complaint.student_id)!)} className="text-xs font-medium text-blue-600 dark:text-blue-500 hover:underline">View Student Profile</button>
                                             <select
                                                 onChange={(e) => updateComplaintStatus(complaint.id, e.target.value as Complaint['status'])}
                                                 value={complaint.status}
-                                                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1.5"
+                                                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
                                             >
                                                 <option value="Pending">Pending</option>
                                                 <option value="In Progress">In Progress</option>
@@ -577,19 +593,19 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 return (
                     <form onSubmit={handleComplaintSubmit} className="space-y-4">
                         <div>
-                            <label htmlFor="description" className="block mb-2 text-sm font-medium text-gray-900">Complaint Description</label>
+                            <label htmlFor="description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Complaint Description</label>
                             <textarea
                                 id="description"
                                 value={complaintDescription}
                                 onChange={(e) => setComplaintDescription(e.target.value)}
                                 rows={4}
-                                className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                                 placeholder="Please describe your issue in detail..."
                                 required
                             />
                         </div>
                         {formError && <p className="text-sm text-red-600">{formError}</p>}
-                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">
+                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
                             Submit Complaint
                         </button>
                     </form>
@@ -598,10 +614,10 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
             case 'roomOccupancy':
                 return (
                     <div>
-                        <button onClick={handleExportRooms} className="mb-4 w-full flex items-center justify-center p-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300">Export to CSV</button>
+                        <button onClick={handleExportRooms} className="mb-4 w-full flex items-center justify-center p-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500">Export to CSV</button>
                         <div className="max-h-96 overflow-y-auto">
-                            <table className="w-full text-sm text-left text-gray-500">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                            <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 sticky top-0">
                                     <tr>
                                         <th scope="col" className="px-4 py-3">Room #</th>
                                         <th scope="col" className="px-4 py-3">Gender</th>
@@ -612,8 +628,8 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                                     {rooms.map(room => {
                                         const occupants = room.students?.[0]?.count || 0;
                                         return (
-                                            <tr key={room.id} className="border-b hover:bg-gray-50">
-                                                <td className="px-4 py-3 font-medium text-gray-900">{room.room_number}</td>
+                                            <tr key={room.id} className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                                <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{room.room_number}</td>
                                                 <td className="px-4 py-3">{room.gender_type}</td>
                                                 <td className="px-4 py-3">{occupants} / {room.capacity}</td>
                                             </tr>
@@ -632,12 +648,12 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 );
                 return (
                     <div className="space-y-4">
-                        <p>Select a room for <strong>{studentToAssign?.name}</strong> ({studentToAssign?.gender}):</p>
+                        <p className="dark:text-gray-300">Select a room for <strong>{studentToAssign?.name}</strong> ({studentToAssign?.gender}):</p>
                         <div>
                             <select
                                 onChange={(e) => setSelectedRoomId(Number(e.target.value))}
                                 defaultValue=""
-                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                             >
                                 <option value="" disabled>Select a room</option>
                                 {availableRooms.map(room => (
@@ -648,7 +664,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                             </select>
                         </div>
                          {availableRooms.length === 0 && <p className="text-sm text-center text-red-500">No available rooms for this student's gender.</p>}
-                        <button onClick={handleConfirmAssignment} disabled={!selectedRoomId} className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400">
+                        <button onClick={handleConfirmAssignment} disabled={!selectedRoomId} className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center disabled:bg-gray-400 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 dark:disabled:bg-gray-600">
                             Confirm Assignment
                         </button>
                     </div>
@@ -659,9 +675,9 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     <div>
                         {roommates.length > 0 ? (
                             <ul className="space-y-2">
-                                {roommates.map((mate, index) => <li key={index} className="p-2 bg-gray-100 rounded-md">{mate.name}</li>)}
+                                {roommates.map((mate, index) => <li key={index} className="p-2 bg-gray-100 dark:bg-gray-700 dark:text-gray-200 rounded-md">{mate.name}</li>)}
                             </ul>
-                        ) : <p className="text-center text-gray-500">You are the only one in this room currently.</p>}
+                        ) : <p className="text-center text-gray-500 dark:text-gray-400">You are the only one in this room currently.</p>}
                     </div>
                 );
 
@@ -669,23 +685,23 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 return (
                     <form onSubmit={handleAddRoom} className="space-y-4">
                         <div>
-                            <label htmlFor="room-number" className="block mb-2 text-sm font-medium text-gray-900">Room Number</label>
-                            <input type="text" id="room-number" value={newRoomNumber} onChange={e => setNewRoomNumber(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                            <label htmlFor="room-number" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Room Number</label>
+                            <input type="text" id="room-number" value={newRoomNumber} onChange={e => setNewRoomNumber(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         <div>
-                            <label htmlFor="capacity" className="block mb-2 text-sm font-medium text-gray-900">Capacity</label>
-                            <input type="number" id="capacity" value={newRoomCapacity} onChange={e => setNewRoomCapacity(Number(e.target.value))} min="1" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                            <label htmlFor="capacity" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Capacity</label>
+                            <input type="number" id="capacity" value={newRoomCapacity} onChange={e => setNewRoomCapacity(Number(e.target.value))} min="1" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         <div>
-                            <label htmlFor="gender" className="block mb-2 text-sm font-medium text-gray-900">Gender Type</label>
-                            <select id="gender" value={newRoomGender} onChange={e => setNewRoomGender(e.target.value as any)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5">
+                            <label htmlFor="gender" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Gender Type</label>
+                            <select id="gender" value={newRoomGender} onChange={e => setNewRoomGender(e.target.value as any)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                                 <option value="Mixed">Mixed</option>
                             </select>
                         </div>
                         {formError && <p className="text-sm text-red-600">{formError}</p>}
-                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Add Room</button>
+                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">Add Room</button>
                     </form>
                 );
 
@@ -694,7 +710,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 const studentComplaints = complaints.filter(c => c.student_id === selectedStudent.id);
                 return (
                      <div className="space-y-4 text-sm">
-                        <div className="space-y-1 p-3 bg-gray-50 rounded-md">
+                        <div className="space-y-1 p-3 bg-gray-50 dark:bg-gray-700 dark:text-gray-300 rounded-md">
                             <p><strong>Name:</strong> {selectedStudent.name}</p>
                             <p><strong>Email:</strong> {selectedStudent.email}</p>
                             <p><strong>Level:</strong> {selectedStudent.level}</p>
@@ -702,16 +718,16 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                             <p><strong>Room:</strong> {rooms.find(r => r.id === selectedStudent.room_id)?.room_number || 'Unassigned'}</p>
                         </div>
                          <div>
-                            <h4 className="font-semibold mb-2">Complaint History ({studentComplaints.length})</h4>
+                            <h4 className="font-semibold mb-2 dark:text-gray-200">Complaint History ({studentComplaints.length})</h4>
                             <div className="max-h-48 overflow-y-auto space-y-2">
-                            {studentComplaints.length === 0 ? <p className="text-gray-500">No complaints filed.</p> :
+                            {studentComplaints.length === 0 ? <p className="text-gray-500 dark:text-gray-400">No complaints filed.</p> :
                                 studentComplaints.map(c => (
-                                    <div key={c.id} className="p-2 border rounded-md">
+                                    <div key={c.id} className="p-2 border dark:border-gray-600 rounded-md">
                                         <div className="flex justify-between items-center">
-                                            <p className="text-xs text-gray-500">{new Date(c.created_at).toLocaleDateString()}</p>
-                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${c.status === 'Resolved' ? 'bg-green-100 text-green-800' : c.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{c.status}</span>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(c.created_at).toLocaleDateString()}</p>
+                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${c.status === 'Resolved' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : c.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'}`}>{c.status}</span>
                                         </div>
-                                        <p className="mt-1">{c.description}</p>
+                                        <p className="mt-1 dark:text-gray-300">{c.description}</p>
                                     </div>
                                 ))
                             }
@@ -724,42 +740,42 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 return (
                      <form onSubmit={handleUpdateProfile} className="space-y-4">
                         <div>
-                            <label htmlFor="edit-name" className="block mb-2 text-sm font-medium text-gray-900">Full Name</label>
-                            <input type="text" id="edit-name" value={editedName} onChange={e => setEditedName(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                            <label htmlFor="edit-name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Full Name</label>
+                            <input type="text" id="edit-name" value={editedName} onChange={e => setEditedName(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         <div>
-                            <label htmlFor="edit-level" className="block mb-2 text-sm font-medium text-gray-900">Level</label>
-                            <input type="text" id="edit-level" value={editedLevel} onChange={e => setEditedLevel(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                            <label htmlFor="edit-level" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Level</label>
+                            <input type="text" id="edit-level" value={editedLevel} onChange={e => setEditedLevel(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         {formError && <p className="text-sm text-red-600">{formError}</p>}
-                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Update Profile</button>
+                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">Update Profile</button>
                     </form>
                 );
             case 'postAnnouncement':
                  return (
                      <form onSubmit={handlePostAnnouncement} className="space-y-4">
                         <div>
-                            <label htmlFor="ann-title" className="block mb-2 text-sm font-medium text-gray-900">Title</label>
-                            <input type="text" id="ann-title" value={announcementTitle} onChange={e => setAnnouncementTitle(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                            <label htmlFor="ann-title" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Title</label>
+                            <input type="text" id="ann-title" value={announcementTitle} onChange={e => setAnnouncementTitle(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         <div>
-                            <label htmlFor="ann-content" className="block mb-2 text-sm font-medium text-gray-900">Content</label>
-                            <textarea id="ann-content" value={announcementContent} onChange={e => setAnnouncementContent(e.target.value)} rows={5} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                            <label htmlFor="ann-content" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Content</label>
+                            <textarea id="ann-content" value={announcementContent} onChange={e => setAnnouncementContent(e.target.value)} rows={5} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         {formError && <p className="text-sm text-red-600">{formError}</p>}
-                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Post Announcement</button>
+                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">Post Announcement</button>
                     </form>
                 );
                 
             case 'viewAnnouncements':
                 return (
                     <div className="max-h-96 overflow-y-auto space-y-4">
-                        {announcements.length === 0 && <p className="text-center text-gray-500">No announcements yet.</p>}
+                        {announcements.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400">No announcements yet.</p>}
                         {announcements.map(ann => (
-                            <div key={ann.id} className="p-4 bg-gray-50 rounded-lg">
-                                <h4 className="font-semibold text-gray-800">{ann.title}</h4>
-                                <p className="text-xs text-gray-500 mb-2">{new Date(ann.created_at).toLocaleString()}</p>
-                                <p className="text-gray-600 whitespace-pre-wrap">{ann.content}</p>
+                            <div key={ann.id} className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <h4 className="font-semibold text-gray-800 dark:text-gray-200">{ann.title}</h4>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">{new Date(ann.created_at).toLocaleString()}</p>
+                                <p className="text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{ann.content}</p>
                             </div>
                         ))}
                     </div>
@@ -807,12 +823,12 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     
     if (appStatus === 'loading') {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-                <svg className="animate-spin h-10 w-10 text-amber-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+            <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
+                <svg className="animate-spin h-10 w-10 text-amber-500 mb-4" xmlns="http://www.w.org/2000/svg" fill="none" viewBox="0 0 20 20">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p className="text-lg text-gray-600">
+                <p className="text-lg text-gray-600 dark:text-gray-400">
                     Loading application...
                 </p>
             </div>
@@ -844,6 +860,8 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     assignedStudents={assignedStudentsCount}
                     occupancyPercentage={occupancyPercentage}
                     pendingComplaints={pendingComplaintsCount}
+                    theme={theme}
+                    toggleTheme={toggleTheme}
                 /> :
                 <StudentDashboard
                     student={currentStudent}
@@ -854,6 +872,8 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     onViewRoommates={() => openModal('viewRoommates')}
                     onViewAnnouncements={() => openModal('viewAnnouncements')}
                     onEditProfile={handleOpenEditProfile}
+                    theme={theme}
+                    toggleTheme={toggleTheme}
                 />
             )}
 
@@ -866,7 +886,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
             </Modal>
 
             {notification && (
-                 <div className="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in-up z-50">
+                 <div className="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in-up z-50 dark:bg-gray-700 dark:text-gray-200">
                     {notification}
                 </div>
             )}
@@ -905,25 +925,25 @@ const UpdatePasswordForm: React.FC<{ onPasswordUpdated: () => void }> = ({ onPas
     };
     
     return (
-        <div className="min-h-screen flex items-center justify-center bg-amber-50 p-4">
-            <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-lg">
+        <div className="min-h-screen flex items-center justify-center bg-amber-50 p-4 dark:bg-gray-900">
+            <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-lg dark:bg-gray-800">
                 <div className="text-center">
-                    <h1 className="text-3xl font-bold text-gray-800">Update Your Password</h1>
-                    <p className="mt-2 text-gray-500">Enter a new password for your account.</p>
+                    <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">Update Your Password</h1>
+                    <p className="mt-2 text-gray-500 dark:text-gray-400">Enter a new password for your account.</p>
                 </div>
                 <form className="mt-8 space-y-4" onSubmit={handlePasswordUpdate}>
                     <input 
                         name="password" 
                         type="password"
                         required 
-                        className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm"
+                        className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
                         placeholder="New Password" 
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                     />
                     {error && <p className="text-sm text-red-600 text-center">{error}</p>}
                     <div>
-                        <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:bg-amber-300">
+                        <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:bg-amber-300 dark:disabled:bg-amber-800">
                             {loading ? 'Updating...' : 'Update Password'}
                         </button>
                     </div>

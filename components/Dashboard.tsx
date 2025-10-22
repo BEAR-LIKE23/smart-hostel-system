@@ -15,6 +15,8 @@ interface AdminDashboardProps {
   assignedStudents: number;
   occupancyPercentage: number;
   pendingComplaints: number;
+  theme: 'light' | 'dark';
+  toggleTheme: () => void;
 }
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
@@ -31,13 +33,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     assignedStudents,
     occupancyPercentage,
     pendingComplaints,
+    theme,
+    toggleTheme,
 }) => {
   return (
-    <div className="min-h-screen bg-green-50 flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-green-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 transition-colors duration-300">
       <div className="w-full max-w-4xl text-center">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h1 className="text-3xl font-bold text-gray-800 capitalize">Admin Dashboard</h1>
-            <p className="text-gray-500 mt-2 mb-8">Welcome, {username}!</p>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 relative">
+            <div className="absolute top-4 right-4">
+                <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 capitalize">Admin Dashboard</h1>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 mb-8">Welcome, {username}!</p>
             
             {/* NEW: Analytics Panel */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -82,7 +89,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
             </div>
              <div className="mt-6">
-                <button onClick={onLogout} className="w-full max-w-xs mx-auto flex items-center justify-center p-3 rounded-lg font-semibold transition-all duration-300 ease-in-out bg-gray-200 text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                <button onClick={onLogout} className="w-full max-w-xs mx-auto flex items-center justify-center p-3 rounded-lg font-semibold transition-all duration-300 ease-in-out bg-gray-200 text-gray-700 hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 dark:focus:ring-gray-500">
                     <LogoutIcon />
                     <span className="ml-3">Logout</span>
                 </button>
@@ -129,10 +136,27 @@ const DashboardButton: React.FC<DashboardButtonProps> = ({ onClick, text, icon, 
         <button 
             onClick={onClick} 
             disabled={isDisabled}
-            className={`w-full flex items-center justify-center p-4 rounded-lg font-semibold transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-green-500 text-white hover:bg-green-600 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none ${className}`}
+            className={`w-full flex items-center justify-center p-4 rounded-lg font-semibold transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-green-500 text-white hover:bg-green-600 focus:ring-green-500 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none dark:disabled:bg-gray-600 ${className}`}
         >
             {icon}
             <span className="ml-3">{text}</span>
+        </button>
+    );
+};
+
+
+const ThemeToggle: React.FC<{ theme: 'light' | 'dark'; toggleTheme: () => void }> = ({ theme, toggleTheme }) => {
+    return (
+        <button
+            onClick={toggleTheme}
+            className="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 dark:focus:ring-offset-gray-800"
+            aria-label="Toggle theme"
+        >
+            {theme === 'light' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+            ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+            )}
         </button>
     );
 };
