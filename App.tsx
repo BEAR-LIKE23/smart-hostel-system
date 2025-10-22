@@ -77,6 +77,11 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [editedLevel, setEditedLevel] = useState('');
     const [announcementTitle, setAnnouncementTitle] = useState('');
     const [announcementContent, setAnnouncementContent] = useState('');
+    
+    // NEW: State for search and filtering
+    const [studentSearchTerm, setStudentSearchTerm] = useState('');
+    const [complaintSearchTerm, setComplaintSearchTerm] = useState('');
+    const [complaintStatusFilter, setComplaintStatusFilter] = useState<'All' | Complaint['status']>('All');
 
 
     useEffect(() => {
@@ -121,13 +126,14 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
             setComplaints(complaintsData || []);
         } else { // student
             let studentData = null;
+            // FIX: Increased retry delay to 3 seconds for more reliability
             for (let i = 0; i < 2; i++) {
                 const { data } = await supabase.from('students').select('*, rooms(*)').eq('id', user.id).single();
                 if (data) {
                     studentData = data;
                     break;
                 }
-                if (i === 0) await new Promise(resolve => setTimeout(resolve, 2000));
+                if (i === 0) await new Promise(resolve => setTimeout(resolve, 3000));
             }
 
             setCurrentStudent(studentData);
@@ -439,18 +445,34 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         setEditedLevel('');
         setAnnouncementTitle('');
         setAnnouncementContent('');
+        // NEW: Reset search/filter states
+        setStudentSearchTerm('');
+        setComplaintSearchTerm('');
+        setComplaintStatusFilter('All');
     };
 
-    // FIX: Implement `renderModalContent` to return JSX based on the active modal type.
     const renderModalContent = () => {
         switch (activeModal) {
             case 'view':
+                const filteredStudents = students.filter(student =>
+                    student.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) ||
+                    student.email.toLowerCase().includes(studentSearchTerm.toLowerCase())
+                );
                 return (
                     <div>
-                        <button onClick={handleExportStudents} className="mb-4 w-full flex items-center justify-center p-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300">Export to CSV</button>
+                        <div className="flex gap-2 mb-4">
+                           <input
+                                type="text"
+                                placeholder="Search by name or email..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                value={studentSearchTerm}
+                                onChange={e => setStudentSearchTerm(e.target.value)}
+                            />
+                            <button onClick={handleExportStudents} className="flex-shrink-0 px-4 py-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300">Export</button>
+                        </div>
                         <div className="max-h-96 overflow-y-auto">
                             <table className="w-full text-sm text-left text-gray-500">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
                                     <tr>
                                         <th scope="col" className="px-4 py-3">Name</th>
                                         <th scope="col" className="px-4 py-3">Room</th>
@@ -458,7 +480,10 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {students.map(student => (
+                                    {filteredStudents.length === 0 && (
+                                        <tr><td colSpan={3} className="text-center py-4 text-gray-500">No students found.</td></tr>
+                                    )}
+                                    {filteredStudents.map(student => (
                                         <tr key={student.id} className="border-b hover:bg-gray-50">
                                             <td className="px-4 py-3 font-medium text-gray-900">{student.name}</td>
                                             <td className="px-4 py-3">{rooms.find(r => r.id === student.room_id)?.room_number || 'Unassigned'}</td>
@@ -479,35 +504,72 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 );
 
             case 'viewComplaints':
-                const complaintsToShow = userRole === 'admin' ? complaints : complaints.filter(c => c.student_id === session?.user.id);
+                let complaintsToShow = userRole === 'admin' ? complaints : complaints.filter(c => c.student_id === session?.user.id);
+                 if (userRole === 'admin') {
+                    if (complaintStatusFilter !== 'All') {
+                        complaintsToShow = complaintsToShow.filter(c => c.status === complaintStatusFilter);
+                    }
+                    if (complaintSearchTerm) {
+                        const lowerCaseSearch = complaintSearchTerm.toLowerCase();
+                        complaintsToShow = complaintsToShow.filter(c =>
+                            c.student_name.toLowerCase().includes(lowerCaseSearch) ||
+                            c.room_number.toLowerCase().includes(lowerCaseSearch) ||
+                            c.description.toLowerCase().includes(lowerCaseSearch)
+                        );
+                    }
+                }
+                
+                const filterButtonClasses = (status: typeof complaintStatusFilter) => 
+                  `px-3 py-1 text-sm font-medium rounded-full transition-colors ${complaintStatusFilter === status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+
                 return (
-                    <div className="max-h-96 overflow-y-auto space-y-4">
-                        {complaintsToShow.length === 0 && <p className="text-center text-gray-500">No complaints found.</p>}
-                        {complaintsToShow.map(complaint => (
-                            <div key={complaint.id} className="p-4 bg-gray-50 rounded-lg">
-                                <div className="flex justify-between items-start">
-                                    <div>
-                                        <p className="font-semibold text-gray-800">{complaint.student_name} (Room {complaint.room_number})</p>
-                                        <p className="text-xs text-gray-500">{new Date(complaint.created_at).toLocaleString()}</p>
-                                    </div>
-                                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${complaint.status === 'Resolved' ? 'bg-green-100 text-green-800' : complaint.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{complaint.status}</span>
+                    <div>
+                        {userRole === 'admin' && (
+                            <div className="mb-4 space-y-3">
+                                <input
+                                    type="text"
+                                    placeholder="Search by name, room, or keyword..."
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                    value={complaintSearchTerm}
+                                    onChange={e => setComplaintSearchTerm(e.target.value)}
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                    <button onClick={() => setComplaintStatusFilter('All')} className={filterButtonClasses('All')}>All</button>
+                                    <button onClick={() => setComplaintStatusFilter('Pending')} className={filterButtonClasses('Pending')}>Pending</button>
+                                    <button onClick={() => setComplaintStatusFilter('In Progress')} className={filterButtonClasses('In Progress')}>In Progress</button>
+                                    <button onClick={() => setComplaintStatusFilter('Resolved')} className={filterButtonClasses('Resolved')}>Resolved</button>
                                 </div>
-                                <p className="mt-2 text-gray-600">{complaint.description}</p>
-                                {userRole === 'admin' && (
-                                    <div className="mt-3 text-right">
-                                        <select
-                                            onChange={(e) => updateComplaintStatus(complaint.id, e.target.value as Complaint['status'])}
-                                            value={complaint.status}
-                                            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1.5"
-                                        >
-                                            <option value="Pending">Pending</option>
-                                            <option value="In Progress">In Progress</option>
-                                            <option value="Resolved">Resolved</option>
-                                        </select>
-                                    </div>
-                                )}
                             </div>
-                        ))}
+                        )}
+                        <div className="max-h-96 overflow-y-auto space-y-4">
+                            {complaintsToShow.length === 0 && <p className="text-center text-gray-500">No complaints found.</p>}
+                            {complaintsToShow.map(complaint => (
+                                <div key={complaint.id} className="p-4 bg-gray-50 rounded-lg">
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold text-gray-800">{complaint.student_name} (Room {complaint.room_number})</p>
+                                            <p className="text-xs text-gray-500">{new Date(complaint.created_at).toLocaleString()}</p>
+                                        </div>
+                                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${complaint.status === 'Resolved' ? 'bg-green-100 text-green-800' : complaint.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{complaint.status}</span>
+                                    </div>
+                                    <p className="mt-2 text-gray-600">{complaint.description}</p>
+                                    {userRole === 'admin' && (
+                                        <div className="mt-3 flex items-center justify-between">
+                                             <button onClick={() => handleOpenStudentProfile(students.find(s => s.id === complaint.student_id)!)} className="text-xs font-medium text-blue-600 hover:underline">View Student Profile</button>
+                                            <select
+                                                onChange={(e) => updateComplaintStatus(complaint.id, e.target.value as Complaint['status'])}
+                                                value={complaint.status}
+                                                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1.5"
+                                            >
+                                                <option value="Pending">Pending</option>
+                                                <option value="In Progress">In Progress</option>
+                                                <option value="Resolved">Resolved</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 );
 
@@ -539,7 +601,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                         <button onClick={handleExportRooms} className="mb-4 w-full flex items-center justify-center p-2 rounded-md font-semibold transition-all duration-300 bg-gray-200 text-gray-700 hover:bg-gray-300">Export to CSV</button>
                         <div className="max-h-96 overflow-y-auto">
                             <table className="w-full text-sm text-left text-gray-500">
-                                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                                <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
                                     <tr>
                                         <th scope="col" className="px-4 py-3">Room #</th>
                                         <th scope="col" className="px-4 py-3">Gender</th>
@@ -629,13 +691,32 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
 
             case 'studentProfile':
                 if (!selectedStudent) return <p>No student selected.</p>;
+                const studentComplaints = complaints.filter(c => c.student_id === selectedStudent.id);
                 return (
-                    <div className="space-y-2 text-sm">
-                        <p><strong>Name:</strong> {selectedStudent.name}</p>
-                        <p><strong>Email:</strong> {selectedStudent.email}</p>
-                        <p><strong>Level:</strong> {selectedStudent.level}</p>
-                        <p><strong>Gender:</strong> {selectedStudent.gender}</p>
-                        <p><strong>Room:</strong> {rooms.find(r => r.id === selectedStudent.room_id)?.room_number || 'Unassigned'}</p>
+                     <div className="space-y-4 text-sm">
+                        <div className="space-y-1 p-3 bg-gray-50 rounded-md">
+                            <p><strong>Name:</strong> {selectedStudent.name}</p>
+                            <p><strong>Email:</strong> {selectedStudent.email}</p>
+                            <p><strong>Level:</strong> {selectedStudent.level}</p>
+                            <p><strong>Gender:</strong> {selectedStudent.gender}</p>
+                            <p><strong>Room:</strong> {rooms.find(r => r.id === selectedStudent.room_id)?.room_number || 'Unassigned'}</p>
+                        </div>
+                         <div>
+                            <h4 className="font-semibold mb-2">Complaint History ({studentComplaints.length})</h4>
+                            <div className="max-h-48 overflow-y-auto space-y-2">
+                            {studentComplaints.length === 0 ? <p className="text-gray-500">No complaints filed.</p> :
+                                studentComplaints.map(c => (
+                                    <div key={c.id} className="p-2 border rounded-md">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xs text-gray-500">{new Date(c.created_at).toLocaleDateString()}</p>
+                                            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${c.status === 'Resolved' ? 'bg-green-100 text-green-800' : c.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{c.status}</span>
+                                        </div>
+                                        <p className="mt-1">{c.description}</p>
+                                    </div>
+                                ))
+                            }
+                            </div>
+                         </div>
                     </div>
                 );
 
@@ -689,13 +770,12 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         }
     };
     
-    // FIX: Implement `getModalTitle` to return a string title for the modal.
     const getModalTitle = (): string => {
         switch (activeModal) {
             case 'view':
-                return 'All Students';
+                return 'Student Management';
             case 'viewComplaints':
-                return userRole === 'admin' ? 'All Complaints' : 'My Complaints';
+                return userRole === 'admin' ? 'Manage Complaints' : 'My Complaints';
             case 'submitComplaint':
                 return 'Submit a New Complaint';
             case 'roomOccupancy':
@@ -782,12 +862,11 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 onClose={closeModal} 
                 title={getModalTitle()}
             >
-                {/* Modal content rendering is omitted for brevity but remains unchanged */}
                 {renderModalContent()}
             </Modal>
 
             {notification && (
-                 <div className="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in-up">
+                 <div className="fixed bottom-5 right-5 bg-gray-800 text-white py-2 px-4 rounded-lg shadow-lg animate-fade-in-up z-50">
                     {notification}
                 </div>
             )}
@@ -799,7 +878,6 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     );
 };
 
-// NEW: Component for updating the password
 const UpdatePasswordForm: React.FC<{ onPasswordUpdated: () => void }> = ({ onPasswordUpdated }) => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
