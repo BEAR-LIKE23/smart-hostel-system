@@ -1,0 +1,9 @@
+{
+  "name": "Smart Hostel Allocation and Management System",
+  "description": "A web-based application for students and administrators to manage hostel allocation, room assignments, and complaint handling. Powered by React, Tailwind CSS, and Supabase.",
+  "env": [
+    "SUPABASE_URL",
+    "SUPABASE_KEY"
+  ],
+  "requestFramePermissions": []
+}
