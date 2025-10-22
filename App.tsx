@@ -5,7 +5,7 @@ import Login from './components/Login';
 import AdminDashboard from './components/Dashboard';
 import StudentDashboard from './components/StudentDashboard';
 import { Modal } from './components/Modal';
-import { Student, Room, Complaint, ModalType } from './types';
+import { Student, Room, Complaint, ModalType, Announcement } from './types';
 
 
 const App: React.FC = () => {
@@ -55,6 +55,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [currentStudent, setCurrentStudent] = useState<Student | null | undefined>(undefined);
     const [rooms, setRooms] = useState<Room[]>([]);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
     const [roommates, setRoommates] = useState<Pick<Student, 'name'>[]>([]);
     
     // UI states
@@ -74,6 +75,8 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [newRoomGender, setNewRoomGender] = useState<'Male' | 'Female' | 'Mixed'>('Male');
     const [editedName, setEditedName] = useState('');
     const [editedLevel, setEditedLevel] = useState('');
+    const [announcementTitle, setAnnouncementTitle] = useState('');
+    const [announcementContent, setAnnouncementContent] = useState('');
 
 
     useEffect(() => {
@@ -104,6 +107,10 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const fetchData = async (user: User) => {
         const role = user.email?.includes('admin') ? 'admin' : 'student';
         setUserRole(role);
+
+        // All users need to see announcements
+        const { data: announcementsData } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+        setAnnouncements(announcementsData || []);
 
         if (role === 'admin') {
             const { data: studentsData } = await supabase.from('students').select('*').order('name', { ascending: true });
@@ -149,6 +156,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         setStudents([]);
         setRooms([]);
         setComplaints([]);
+        setAnnouncements([]);
         setCurrentStudent(null);
         setRoommates([]);
         setIsUpdatingPassword(false);
@@ -341,6 +349,31 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         }
     };
 
+    const handlePostAnnouncement = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setFormError(null);
+
+        if (!announcementTitle.trim() || !announcementContent.trim()) {
+            setFormError("Title and content cannot be empty.");
+            return;
+        }
+
+        const { error } = await supabase.from('announcements').insert({
+            title: announcementTitle,
+            content: announcementContent,
+        });
+
+        if (error) {
+            showNotification(`Error posting announcement: ${error.message}`);
+            setFormError(error.message);
+        } else {
+            showNotification("Announcement posted successfully!");
+            closeModal();
+            if (session) await fetchData(session.user);
+        }
+    };
+
+
     const exportToCsv = (data: any[], filename: string) => {
         if (data.length === 0) {
             showNotification("No data to export.");
@@ -404,6 +437,8 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         setNewRoomGender('Male');
         setEditedName('');
         setEditedLevel('');
+        setAnnouncementTitle('');
+        setAnnouncementContent('');
     };
 
     // FIX: Implement `renderModalContent` to return JSX based on the active modal type.
@@ -620,8 +655,34 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     </form>
                 );
             case 'postAnnouncement':
+                 return (
+                     <form onSubmit={handlePostAnnouncement} className="space-y-4">
+                        <div>
+                            <label htmlFor="ann-title" className="block mb-2 text-sm font-medium text-gray-900">Title</label>
+                            <input type="text" id="ann-title" value={announcementTitle} onChange={e => setAnnouncementTitle(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                        </div>
+                        <div>
+                            <label htmlFor="ann-content" className="block mb-2 text-sm font-medium text-gray-900">Content</label>
+                            <textarea id="ann-content" value={announcementContent} onChange={e => setAnnouncementContent(e.target.value)} rows={5} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5" required />
+                        </div>
+                        {formError && <p className="text-sm text-red-600">{formError}</p>}
+                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center">Post Announcement</button>
+                    </form>
+                );
+                
             case 'viewAnnouncements':
-                return <p className="text-center text-gray-500">This feature is coming soon.</p>;
+                return (
+                    <div className="max-h-96 overflow-y-auto space-y-4">
+                        {announcements.length === 0 && <p className="text-center text-gray-500">No announcements yet.</p>}
+                        {announcements.map(ann => (
+                            <div key={ann.id} className="p-4 bg-gray-50 rounded-lg">
+                                <h4 className="font-semibold text-gray-800">{ann.title}</h4>
+                                <p className="text-xs text-gray-500 mb-2">{new Date(ann.created_at).toLocaleString()}</p>
+                                <p className="text-gray-600 whitespace-pre-wrap">{ann.content}</p>
+                            </div>
+                        ))}
+                    </div>
+                );
                 
             default:
                 return null;
@@ -697,6 +758,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     onAllocate={handleAllocateRooms}
                     onRoomOccupancy={() => openModal('roomOccupancy')}
                     onAddRoom={() => openModal('addRoom')}
+                    onPostAnnouncement={() => openModal('postAnnouncement')}
                     isAllocating={isAllocating}
                     totalStudents={students.length}
                     assignedStudents={assignedStudentsCount}
@@ -710,6 +772,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     onSubmitComplaint={() => openModal('submitComplaint')}
                     onViewComplaints={() => openModal('viewComplaints')}
                     onViewRoommates={() => openModal('viewRoommates')}
+                    onViewAnnouncements={() => openModal('viewAnnouncements')}
                     onEditProfile={handleOpenEditProfile}
                 />
             )}

@@ -9,6 +9,7 @@ interface AdminDashboardProps {
   onAllocate: () => void;
   onRoomOccupancy: () => void;
   onAddRoom: () => void;
+  onPostAnnouncement: () => void; // New prop for announcements
   isAllocating: boolean;
   totalStudents: number;
   assignedStudents: number;
@@ -24,6 +25,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onAllocate, 
     onRoomOccupancy, 
     onAddRoom, 
+    onPostAnnouncement,
     isAllocating,
     totalStudents,
     assignedStudents,
@@ -65,17 +67,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <DashboardButton onClick={onViewStudents} text="View Students" icon={<UsersIcon />} />
                 <DashboardButton onClick={onViewComplaints} text="Manage Complaints" icon={<ClipboardListIcon />} />
                 <DashboardButton onClick={onRoomOccupancy} text="Room Occupancy" icon={<HomeIcon />} />
                 <DashboardButton onClick={onAddRoom} text="Add New Room" icon={<PlusCircleIcon />} />
+                <DashboardButton onClick={onPostAnnouncement} text="Post Announcement" icon={<MegaphoneIcon />} />
                 <DashboardButton 
                     onClick={onAllocate} 
                     text={isAllocating ? "Allocating..." : "Allocate Rooms"} 
                     icon={<KeyIcon />} 
                     isDisabled={isAllocating}
-                    className="md:col-span-2"
+                    className="md:col-span-3"
                 />
             </div>
              <div className="mt-6">
@@ -143,6 +146,7 @@ const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-
 const KeyIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>;
 const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
+const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
 
 const UsersIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zm-3 2a5 5 0 00-5 5v1a1 1 0 001 1h8a1 1 0 001-1v-1a5 5 0 00-5-5zM16 6a3 3 0 11-6 0 3 3 0 016 0zm-3 2a5 5 0 00-4.545 3.372A3.998 3.998 0 0115 11a4 4 0 010 8h1a1 1 0 001-1v-1a5 5 0 00-5-5z" /></svg>;
 const ChartPieIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>;

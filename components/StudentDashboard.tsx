@@ -9,10 +9,11 @@ interface StudentDashboardProps {
   onSubmitComplaint: () => void;
   onViewComplaints: () => void;
   onViewRoommates: () => void;
+  onViewAnnouncements: () => void; // New prop for announcements
   onEditProfile: () => void; // New prop for editing profile
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints, onLogout, onSubmitComplaint, onViewComplaints, onViewRoommates, onEditProfile }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints, onLogout, onSubmitComplaint, onViewComplaints, onViewRoommates, onViewAnnouncements, onEditProfile }) => {
   // FIX: Handle three distinct states for a better user experience.
   if (student === undefined) {
     // State 1: Data is still being fetched.
@@ -36,10 +37,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints
                 <p className="mt-2 text-gray-600">
                     Please contact the hostel administrator for assistance.
                 </p>
-                <button 
+                 <button 
                     onClick={onLogout} 
-                    className="mt-6 inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-semibold transition-all duration-300 ease-in-out bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                    Logout
+                    className="mt-6 inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-semibold transition-all duration-300 ease-in-out bg-amber-500 text-white hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.707-10.293a1 1 0 00-1.414-1.414L6 9.586 4.707 8.293a1 1 0 00-1.414 1.414L8.586 11l-2.293 2.293a1 1 0 101.414 1.414L10 12.414l2.293 2.293a1 1 0 001.414-1.414L11.414 11l2.293-2.293a1 1 0 000-1.414z" clipRule="evenodd" />
+                    </svg>
+                    Go Back to Login
                 </button>
             </div>
         </div>
@@ -80,8 +84,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints
             </div>
 
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <DashboardButton onClick={onSubmitComplaint} text="Submit Complaint" icon={<ExclamationIcon />} isDisabled={!room}/>
+                <DashboardButton onClick={onViewAnnouncements} text="View Announcements" icon={<MegaphoneIcon />} />
                 <DashboardButton onClick={onViewComplaints} text="View My Complaints" icon={<ClipboardListIcon />} badgeCount={pendingComplaints} />
+                <DashboardButton onClick={onSubmitComplaint} text="Submit Complaint" icon={<ExclamationIcon />} isDisabled={!room} className="md:col-span-2"/>
             </div>
 
             <div className="mt-6">
@@ -103,11 +108,12 @@ interface DashboardButtonProps {
     icon: React.ReactNode;
     isDisabled?: boolean;
     badgeCount?: number;
+    className?: string;
 }
 
-const DashboardButton: React.FC<DashboardButtonProps> = ({ onClick, text, icon, isDisabled = false, badgeCount = 0 }) => {
+const DashboardButton: React.FC<DashboardButtonProps> = ({ onClick, text, icon, isDisabled = false, badgeCount = 0, className = '' }) => {
     return (
-        <button onClick={onClick} disabled={isDisabled} className="relative w-full flex items-center justify-center p-4 rounded-lg font-semibold transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none">
+        <button onClick={onClick} disabled={isDisabled} className={`relative w-full flex items-center justify-center p-4 rounded-lg font-semibold transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none ${className}`}>
             {icon}
             <span className="ml-3">{text}</span>
             {badgeCount > 0 && (
@@ -121,5 +127,7 @@ const ExclamationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className=
 const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>;
+const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
+
 
 export default StudentDashboard;
