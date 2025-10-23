@@ -52,14 +52,14 @@ const Login: React.FC = () => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
       }
+
     } catch (err: any) {
       setError(err.error_description || err.message);
     } finally {
       setLoading(false);
     }
   };
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
+const handleVerifyOtp = async (e: React.FormEvent) => {      
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -75,42 +75,59 @@ const Login: React.FC = () => {
         if (verifyError) throw verifyError;
         if (!session?.user) throw new Error("Verification successful, but no user session found.");
 
-        // Step 2: Poll for the student profile to be created by the trigger
+        // ⭐ CRITICAL FIX: Set the session BEFORE any queries
+        const { error: sessionError } = await supabase.auth.setSession({
+            access_token: session.access_token,
+            refresh_token: session.refresh_token
+        });
+
+        if (sessionError) throw sessionError;
+
+        // Step 2: Poll for the student profile
         setMessage("Verification successful! Finalizing your profile...");
 
         const user = session.user;
         let profileFound = false;
-        const maxAttempts = 10; // Poll for 5 seconds (10 * 500ms)
+        const maxAttempts = 10;
+        
         for (let i = 0; i < maxAttempts; i++) {
-            const { data: student } = await supabase
+            const { data: student, error: queryError } = await supabase
                 .from('students')
                 .select('id')
                 .eq('id', user.id)
                 .single();
 
+            // Debug logging
+            if (queryError) {
+                console.error(`Poll attempt ${i + 1} error:`, queryError);
+            } else {
+                console.log(`Poll attempt ${i + 1}: Student found!`, student);
+            }
+
             if (student) {
                 profileFound = true;
-                break; // Profile found, exit loop
+                break;
             }
             
-            // Wait before the next attempt
             await new Promise(resolve => setTimeout(resolve, 500));
         }
 
         if (!profileFound) {
-            throw new Error("Your account was created, but we couldn't find your student profile. Please try logging in or contact an administrator.");
+            throw new Error("Your account was created, but we couldn't find your student profile. Please try logging in.");
         }
         
-        // Step 3: Force a reload to trigger the main App's onAuthStateChange
-        window.location.reload();
+        // Step 3: Force reload
+        setMessage("Profile ready! Redirecting...");
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
 
     } catch(err: any) {
+        console.error('Verification error:', err);
         setError(err.error_description || err.message);
-        // Don't keep loading on error, let the user try again.
         setLoading(false);
     }
-  };
-
+};
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     
