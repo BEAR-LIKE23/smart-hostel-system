@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import type { Session, User } from 'https://esm.sh/@supabase/supabase-js@2';
+import { GoogleGenAI, Type } from '@google/genai';
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
 import AdminDashboard from './components/Dashboard';
 import StudentDashboard from './components/StudentDashboard';
 import { Modal } from './components/Modal';
-import { Student, Room, Complaint, ModalType, Announcement } from './types';
+import { Student, Room, Complaint, ModalType, Announcement, MaintenanceRequest } from './types';
 
 
 const App: React.FC = () => {
@@ -59,6 +60,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [rooms, setRooms] = useState<Room[]>([]);
     const [complaints, setComplaints] = useState<Complaint[]>([]);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [maintenanceRequests, setMaintenanceRequests] = useState<MaintenanceRequest[]>([]); // NEW
     const [roommates, setRoommates] = useState<Pick<Student, 'name'>[]>([]);
     
     // UI states
@@ -68,6 +70,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [studentToAssign, setStudentToAssign] = useState<Student | null>(null);
     const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
 
     // Form states
@@ -80,11 +83,20 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [editedLevel, setEditedLevel] = useState('');
     const [announcementTitle, setAnnouncementTitle] = useState('');
     const [announcementContent, setAnnouncementContent] = useState('');
+    const [aiPrompt, setAiPrompt] = useState('');
+    // NEW: Maintenance form states
+    const [maintenanceCategory, setMaintenanceCategory] = useState<MaintenanceRequest['category']>('Plumbing');
+    const [maintenanceUrgency, setMaintenanceUrgency] = useState<MaintenanceRequest['urgency']>('Medium');
+    const [maintenanceDescription, setMaintenanceDescription] = useState('');
+
     
     // NEW: State for search and filtering
     const [studentSearchTerm, setStudentSearchTerm] = useState('');
     const [complaintSearchTerm, setComplaintSearchTerm] = useState('');
     const [complaintStatusFilter, setComplaintStatusFilter] = useState<'All' | Complaint['status']>('All');
+    // NEW: Maintenance filter states
+    const [maintenanceSearchTerm, setMaintenanceSearchTerm] = useState('');
+    const [maintenanceStatusFilter, setMaintenanceStatusFilter] = useState<'All' | MaintenanceRequest['status']>('All');
 
     useEffect(() => {
         if (theme === 'dark') {
@@ -126,42 +138,71 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
 
 
     const fetchData = async (user: User) => {
-        const role = user.email?.includes('admin') ? 'admin' : 'student';
-        setUserRole(role);
+        try {
+            // Securely determine the user's role by calling the database function.
+            const { data: role, error: roleError } = await supabase.rpc('get_user_role');
+            if (roleError) throw roleError;
+            setUserRole(role);
 
-        // All users need to see announcements
-        const { data: announcementsData } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
-        setAnnouncements(announcementsData || []);
+            // All users need to see announcements
+            const { data: announcementsData, error: announcementsError } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
+            if (announcementsError) throw announcementsError;
+            setAnnouncements(announcementsData || []);
 
-        if (role === 'admin') {
-            const { data: studentsData } = await supabase.from('students').select('*').order('name', { ascending: true });
-            const { data: roomsData } = await supabase.from('rooms').select('*, students(count)').order('room_number', { ascending: true });
-            const { data: complaintsData } = await supabase.from('complaints').select('*').order('created_at', { ascending: false });
-            setStudents(studentsData || []);
-            setRooms(roomsData || []);
-            setComplaints(complaintsData || []);
-        } else { // student
-            const { data: studentData } = await supabase
-                .from('students')
-                .select('*, rooms(*)')
-                .eq('id', user.id)
-                .single();
+            if (role === 'admin') {
+                const { data: studentsData, error: studentsError } = await supabase.from('students').select('*').order('name', { ascending: true });
+                if (studentsError) throw studentsError;
+                const { data: roomsData, error: roomsError } = await supabase.from('rooms').select('*, students(count)').order('room_number', { ascending: true });
+                if (roomsError) throw roomsError;
+                const { data: complaintsData, error: complaintsError } = await supabase.from('complaints').select('*').order('created_at', { ascending: false });
+                if (complaintsError) throw complaintsError;
+                const { data: maintenanceData, error: maintenanceError } = await supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false });
+                if (maintenanceError) throw maintenanceError;
 
-            setCurrentStudent(studentData);
-
-            if (studentData) {
-                const { data: complaintsData } = await supabase.from('complaints').select('*').eq('student_id', user.id).order('created_at', { ascending: false });
+                setStudents(studentsData || []);
+                setRooms(roomsData || []);
                 setComplaints(complaintsData || []);
-                
-                if (studentData.room_id) {
-                     const { data: roommateData } = await supabase.from('students').select('name').eq('room_id', studentData.room_id).neq('id', studentData.id);
-                     setRoommates(roommateData || []);
-                } else {
-                    setRoommates([]);
+                setMaintenanceRequests(maintenanceData || []);
+            } else { // student
+                // Step 1: Fetch the core student profile.
+                const { data: studentData, error: studentError } = await supabase
+                    .from('students')
+                    .select('*, rooms(*)')
+                    .eq('id', user.id)
+                    .single();
+
+                // If the profile doesn't exist or there's an error, bail out immediately.
+                if (studentError || !studentData) {
+                    console.error("Error fetching student profile or profile not found for user:", user.id, studentError);
+                    setCurrentStudent(null);
+                    return;
                 }
-            } else {
-                setComplaints([]);
-                setRoommates([]);
+
+                // Step 2: Profile is valid, now fetch all dependent data.
+                const { data: complaintsData, error: complaintsError } = await supabase.from('complaints').select('*').eq('student_id', user.id).order('created_at', { ascending: false });
+                if (complaintsError) throw complaintsError;
+
+                const { data: maintenanceData, error: maintenanceError } = await supabase.from('maintenance_requests').select('*').eq('student_id', user.id).order('created_at', { ascending: false });
+                if (maintenanceError) throw maintenanceError;
+
+                let roommateData: Pick<Student, 'name'>[] = [];
+                if (studentData.room_id) {
+                    const { data, error: roommateError } = await supabase.from('students').select('name').eq('room_id', studentData.room_id).neq('id', studentData.id);
+                    if (roommateError) throw roommateError;
+                    roommateData = data || [];
+                }
+                
+                // Step 3: All data fetched successfully. Now commit to state.
+                setComplaints(complaintsData || []);
+                setMaintenanceRequests(maintenanceData || []);
+                setRoommates(roommateData);
+                setCurrentStudent(studentData); // This is the final step, preventing partial loads.
+            }
+        } catch (error) {
+            console.error("An error occurred during data fetching:", error);
+            showNotification(`Failed to load data. Please check your connection or contact support.`);
+            if (userRole !== 'admin') {
+                setCurrentStudent(null);
             }
         }
     };
@@ -174,6 +215,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         setRooms([]);
         setComplaints([]);
         setAnnouncements([]);
+        setMaintenanceRequests([]);
         setCurrentStudent(null);
         setRoommates([]);
         setIsUpdatingPassword(false);
@@ -266,6 +308,48 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         } else {
             showNotification(`Complaint status updated to "${status}".`);
             setComplaints(complaints.map(c => c.id === id ? {...c, status} : c));
+        }
+    };
+
+    // NEW: Handle maintenance request submission
+    const handleMaintenanceSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!maintenanceDescription.trim()) {
+            setFormError("Description cannot be empty.");
+            return;
+        }
+        if (!currentStudent || !currentStudent.rooms) {
+            setFormError("Cannot submit a request without an assigned room.");
+            return;
+        }
+
+        const { error } = await supabase.from('maintenance_requests').insert({
+            student_id: currentStudent.id,
+            student_name: currentStudent.name,
+            room_number: currentStudent.rooms.room_number,
+            category: maintenanceCategory,
+            urgency: maintenanceUrgency,
+            description: maintenanceDescription,
+            status: 'Pending'
+        });
+
+        if (error) {
+            showNotification(`Error: ${error.message}`);
+        } else {
+            showNotification("Maintenance request submitted successfully!");
+            closeModal();
+            if(session) await fetchData(session.user);
+        }
+    };
+
+    // NEW: Update maintenance request status
+    const updateMaintenanceStatus = async (id: number, status: MaintenanceRequest['status']) => {
+        const { error } = await supabase.from('maintenance_requests').update({ status }).eq('id', id);
+        if(error) {
+            showNotification(`Error: ${error.message}`);
+        } else {
+            showNotification(`Request status updated to "${status}".`);
+            setMaintenanceRequests(maintenanceRequests.map(r => r.id === id ? {...r, status} : r));
         }
     };
 
@@ -390,6 +474,49 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         }
     };
 
+    const handleGenerateAnnouncement = async () => {
+        if (!aiPrompt.trim()) {
+            setFormError("Please enter a topic for the announcement.");
+            return;
+        }
+        setIsGenerating(true);
+        setFormError(null);
+        try {
+            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: `Based on the following points, write a clear and professional announcement for a student hostel. The tone should be informative but friendly. \n\nPoints: "${aiPrompt}"`,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: Type.OBJECT,
+                        properties: {
+                            title: {
+                                type: Type.STRING,
+                                description: "A concise and informative title for the announcement."
+                            },
+                            content: {
+                                type: Type.STRING,
+                                description: "The full content of the announcement, well-formatted and easy to read."
+                            }
+                        },
+                        required: ["title", "content"]
+                    }
+                }
+            });
+
+            const result = JSON.parse(response.text);
+            setAnnouncementTitle(result.title);
+            setAnnouncementContent(result.content);
+        } catch (error) {
+            console.error("Error generating announcement:", error);
+            showNotification("Failed to generate announcement. Please try again.");
+            setFormError("AI generation failed. Please check the console for details.");
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
 
     const exportToCsv = (data: any[], filename: string) => {
         if (data.length === 0) {
@@ -456,10 +583,16 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         setEditedLevel('');
         setAnnouncementTitle('');
         setAnnouncementContent('');
+        setAiPrompt('');
         // NEW: Reset search/filter states
         setStudentSearchTerm('');
         setComplaintSearchTerm('');
         setComplaintStatusFilter('All');
+        setMaintenanceDescription('');
+        setMaintenanceCategory('Plumbing');
+        setMaintenanceUrgency('Medium');
+        setMaintenanceSearchTerm('');
+        setMaintenanceStatusFilter('All');
     };
 
     const renderModalContent = () => {
@@ -605,6 +738,122 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                         </button>
                     </form>
                 );
+            
+            // NEW: Maintenance request submission form
+            case 'submitMaintenance':
+                return (
+                     <form onSubmit={handleMaintenanceSubmit} className="space-y-4">
+                        <div>
+                             <label htmlFor="category" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Category</label>
+                            <select id="category" value={maintenanceCategory} onChange={e => setMaintenanceCategory(e.target.value as any)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                                <option>Plumbing</option>
+                                <option>Electrical</option>
+                                <option>Furniture</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                         <div>
+                             <label htmlFor="urgency" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Urgency</label>
+                            <select id="urgency" value={maintenanceUrgency} onChange={e => setMaintenanceUrgency(e.target.value as any)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white">
+                                <option>Low</option>
+                                <option>Medium</option>
+                                <option>High</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="maintenance-description" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Description of Issue</label>
+                            <textarea
+                                id="maintenance-description"
+                                value={maintenanceDescription}
+                                onChange={(e) => setMaintenanceDescription(e.target.value)}
+                                rows={4}
+                                className="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                placeholder="Please describe the problem..."
+                                required
+                            />
+                        </div>
+                        {formError && <p className="text-sm text-red-600">{formError}</p>}
+                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">
+                            Submit Request
+                        </button>
+                    </form>
+                );
+
+            // NEW: Admin view for maintenance requests
+            case 'viewMaintenance':
+                 let requestsToShow = maintenanceRequests;
+                 if (maintenanceStatusFilter !== 'All') {
+                    requestsToShow = requestsToShow.filter(r => r.status === maintenanceStatusFilter);
+                 }
+                 if (maintenanceSearchTerm) {
+                    const lowerCaseSearch = maintenanceSearchTerm.toLowerCase();
+                    requestsToShow = requestsToShow.filter(r =>
+                        r.student_name.toLowerCase().includes(lowerCaseSearch) ||
+                        r.room_number.toLowerCase().includes(lowerCaseSearch) ||
+                        r.description.toLowerCase().includes(lowerCaseSearch) ||
+                        r.category.toLowerCase().includes(lowerCaseSearch)
+                    );
+                 }
+
+                const maintenanceFilterClasses = (status: typeof maintenanceStatusFilter) => 
+                  `px-3 py-1 text-sm font-medium rounded-full transition-colors ${maintenanceStatusFilter === status ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200 dark:hover:bg-gray-500'}`;
+                
+                const urgencyClasses = {
+                    'High': 'border-red-500 text-red-600 dark:text-red-400',
+                    'Medium': 'border-yellow-500 text-yellow-600 dark:text-yellow-400',
+                    'Low': 'border-green-500 text-green-600 dark:text-green-400',
+                };
+                
+                return (
+                    <div>
+                        <div className="mb-4 space-y-3">
+                            <input
+                                type="text"
+                                placeholder="Search requests..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
+                                value={maintenanceSearchTerm}
+                                onChange={e => setMaintenanceSearchTerm(e.target.value)}
+                            />
+                            <div className="flex flex-wrap gap-2">
+                                <button onClick={() => setMaintenanceStatusFilter('All')} className={maintenanceFilterClasses('All')}>All</button>
+                                <button onClick={() => setMaintenanceStatusFilter('Pending')} className={maintenanceFilterClasses('Pending')}>Pending</button>
+                                <button onClick={() => setMaintenanceStatusFilter('In Progress')} className={maintenanceFilterClasses('In Progress')}>In Progress</button>
+                                <button onClick={() => setMaintenanceStatusFilter('Completed')} className={maintenanceFilterClasses('Completed')}>Completed</button>
+                            </div>
+                        </div>
+                        <div className="max-h-96 overflow-y-auto space-y-4">
+                            {requestsToShow.length === 0 && <p className="text-center text-gray-500 dark:text-gray-400">No maintenance requests found.</p>}
+                            {requestsToShow.map(req => (
+                                <div key={req.id} className={`p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 ${urgencyClasses[req.urgency]}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-semibold text-gray-800 dark:text-gray-200">{req.student_name} (Room {req.room_number})</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(req.created_at).toLocaleString()}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs font-medium">{req.category}</span>
+                                            <span className={`px-2 py-1 text-xs font-semibold rounded-full ${req.status === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : req.status === 'In Progress' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'}`}>{req.status}</span>
+                                        </div>
+                                    </div>
+                                    <p className="mt-2 text-gray-600 dark:text-gray-300">{req.description}</p>
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <button onClick={() => handleOpenStudentProfile(students.find(s => s.id === req.student_id)!)} className="text-xs font-medium text-blue-600 dark:text-blue-500 hover:underline">View Student Profile</button>
+                                        <select
+                                            onChange={(e) => updateMaintenanceStatus(req.id, e.target.value as MaintenanceRequest['status'])}
+                                            value={req.status}
+                                            className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 p-1.5 dark:bg-gray-600 dark:border-gray-500 dark:text-white"
+                                        >
+                                            <option value="Pending">Pending</option>
+                                            <option value="In Progress">In Progress</option>
+                                            <option value="Completed">Completed</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+
 
             case 'roomOccupancy':
                 return (
@@ -749,6 +998,28 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
             case 'postAnnouncement':
                  return (
                      <form onSubmit={handlePostAnnouncement} className="space-y-4">
+                        <div className="p-4 border border-blue-200 rounded-lg bg-blue-50 dark:bg-gray-700 dark:border-blue-900">
+                           <label htmlFor="ai-prompt" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">✨ AI Assistant</label>
+                           <div className="flex gap-2">
+                             <input 
+                                type="text" 
+                                id="ai-prompt" 
+                                value={aiPrompt} 
+                                onChange={e => setAiPrompt(e.target.value)} 
+                                placeholder="e.g., water off saturday 10am-2pm"
+                                className="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white"
+                             />
+                             <button type="button" onClick={handleGenerateAnnouncement} disabled={isGenerating} className="text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 disabled:bg-blue-400 dark:disabled:bg-blue-800">
+                                {isGenerating ? (
+                                    <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                ) : "Generate"}
+                             </button>
+                           </div>
+                        </div>
+
                         <div>
                             <label htmlFor="ann-title" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">Title</label>
                             <input type="text" id="ann-title" value={announcementTitle} onChange={e => setAnnouncementTitle(e.target.value)} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
@@ -758,7 +1029,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                             <textarea id="ann-content" value={announcementContent} onChange={e => setAnnouncementContent(e.target.value)} rows={5} className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" required />
                         </div>
                         {formError && <p className="text-sm text-red-600">{formError}</p>}
-                        <button type="submit" className="w-full text-white bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800">Post Announcement</button>
+                        <button type="submit" className="w-full text-white bg-green-600 hover:bg-green-700 focus:ring-4 focus:outline-none focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-green-500 dark:hover:bg-green-600 dark:focus:ring-green-800">Post Announcement</button>
                     </form>
                 );
                 
@@ -805,6 +1076,10 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 return 'Post a New Announcement';
             case 'viewAnnouncements':
                 return 'Hostel Announcements';
+            case 'submitMaintenance':
+                return 'Submit Maintenance Request';
+            case 'viewMaintenance':
+                return 'Manage Maintenance Requests';
             default:
                 return '';
         }
@@ -815,6 +1090,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const totalCapacity = rooms.reduce((acc, room) => acc + room.capacity, 0);
     const occupancyPercentage = totalCapacity > 0 ? Math.round((assignedStudentsCount / totalCapacity) * 100) : 0;
     const pendingComplaintsCount = complaints.filter(c => c.status === 'Pending' || c.status === 'In Progress').length;
+    const pendingMaintenanceCount = maintenanceRequests.filter(r => r.status !== 'Completed').length; // NEW
     
     if (appStatus === 'loading') {
         return (
@@ -850,11 +1126,13 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     onRoomOccupancy={() => openModal('roomOccupancy')}
                     onAddRoom={() => openModal('addRoom')}
                     onPostAnnouncement={() => openModal('postAnnouncement')}
+                    onViewMaintenance={() => openModal('viewMaintenance')}
                     isAllocating={isAllocating}
                     totalStudents={students.length}
                     assignedStudents={assignedStudentsCount}
                     occupancyPercentage={occupancyPercentage}
                     pendingComplaints={pendingComplaintsCount}
+                    pendingMaintenance={pendingMaintenanceCount}
                     theme={theme}
                     toggleTheme={toggleTheme}
                 /> :
@@ -867,6 +1145,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                     onViewRoommates={() => openModal('viewRoommates')}
                     onViewAnnouncements={() => openModal('viewAnnouncements')}
                     onEditProfile={handleOpenEditProfile}
+                    onSubmitMaintenance={() => openModal('submitMaintenance')}
                     theme={theme}
                     toggleTheme={toggleTheme}
                 />

@@ -31,7 +31,7 @@ const Login: React.FC = () => {
 
     try {
       if (view === 'signup') {
-        const { error: signUpError } = await supabase.auth.signUp({ 
+        const { data, error: signUpError } = await supabase.auth.signUp({ 
           email, 
           password,
           options: {
@@ -45,8 +45,24 @@ const Login: React.FC = () => {
 
         if (signUpError) throw signUpError;
         
-        setView('verify_otp');
-        setResendCooldown(60);
+        // If email confirmation is disabled, the user is logged in instantly.
+        // The `user` object will exist, but `session` will be null until the next page load.
+        // If email confirmation is ON, `user` exists but is not confirmed.
+        if (data.user) {
+            // A user object exists, but they might not have a session yet if email confirmation is required.
+            // Supabase now generally requires confirmation. We check if a session was created.
+            // If not, we assume OTP is needed.
+            if (data.session) {
+                // Email confirmation is likely disabled. Reload to log the user in.
+                window.location.reload();
+            } else {
+                // Standard flow: email confirmation is required.
+                setView('verify_otp');
+                setResendCooldown(60);
+            }
+        } else {
+            throw new Error("Signup did not return a user object.");
+        }
 
       } else { // 'signin'
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -83,9 +99,8 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
 
         if (sessionError) throw sessionError;
 
-        // Step 2: Poll for the student profile
+        // Step 2: Poll for the student profile to ensure it's created by the trigger.
         setMessage("Verification successful! Finalizing your profile...");
-
         const user = session.user;
         let profileFound = false;
         const maxAttempts = 10;
@@ -96,13 +111,6 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
                 .select('id')
                 .eq('id', user.id)
                 .single();
-
-            // Debug logging
-            if (queryError) {
-                console.error(`Poll attempt ${i + 1} error:`, queryError);
-            } else {
-                console.log(`Poll attempt ${i + 1}: Student found!`, student);
-            }
 
             if (student) {
                 profileFound = true;
@@ -260,8 +268,8 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
     <div className="min-h-screen flex items-center justify-center bg-amber-50 dark:bg-gray-900 p-4">
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
         <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">{view === 'signup' ? 'Create Student Account' : 'Hostel Login'}</h1>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">{view === 'signup' ? 'Get started by creating your account' : 'Sign in to manage your hostel'}</p>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">{view === 'signup' ? 'Create Account' : 'Hostel Login'}</h1>
+            <p className="mt-2 text-gray-500 dark:text-gray-400">{view === 'signup' ? 'Get started by creating your student account' : 'Sign in to manage your hostel'}</p>
         </div>
 
         <form className="mt-8 space-y-4" onSubmit={handleAuthAction}>
@@ -271,8 +279,8 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
                  <input name="name" type="text" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
                  <input name="level" type="text" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Level (e.g., 100L)" value={level} onChange={(e) => setLevel(e.target.value)} />
                  <select name="gender" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 bg-white text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={gender} onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}>
-                    <option>Male</option>
-                    <option>Female</option>
+                     <option>Male</option>
+                     <option>Female</option>
                  </select>
               </>
             )}

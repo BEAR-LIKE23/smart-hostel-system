@@ -36,6 +36,20 @@ export interface Announcement {
     content: string;
 }
 
+// NEW: Added MaintenanceRequest interface
+export interface MaintenanceRequest {
+    id: number;
+    created_at: string;
+    student_id: string;
+    student_name: string;
+    room_number: string;
+    category: 'Plumbing' | 'Electrical' | 'Furniture' | 'Other';
+    description: string;
+    status: 'Pending' | 'In Progress' | 'Completed';
+    urgency: 'Low' | 'Medium' | 'High';
+}
+
 
 // FIX: Added back the announcement modal types
-export type ModalType = 'view' | 'viewComplaints' | 'submitComplaint' | 'roomOccupancy' | 'assignRoom' | 'viewRoommates' | 'addRoom' | 'studentProfile' | 'editProfile' | 'postAnnouncement' | 'viewAnnouncements' | null;
+// NEW: Added maintenance modal types
+export type ModalType = 'view' | 'viewComplaints' | 'submitComplaint' | 'roomOccupancy' | 'assignRoom' | 'viewRoommates' | 'addRoom' | 'studentProfile' | 'editProfile' | 'postAnnouncement' | 'viewAnnouncements' | 'submitMaintenance' | 'viewMaintenance' | null;

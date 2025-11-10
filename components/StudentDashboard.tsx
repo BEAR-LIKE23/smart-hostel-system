@@ -11,11 +11,12 @@ interface StudentDashboardProps {
   onViewRoommates: () => void;
   onViewAnnouncements: () => void; // New prop for announcements
   onEditProfile: () => void; // New prop for editing profile
+  onSubmitMaintenance: () => void; // New prop for maintenance
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints, onLogout, onSubmitComplaint, onViewComplaints, onViewRoommates, onViewAnnouncements, onEditProfile, theme, toggleTheme }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints, onLogout, onSubmitComplaint, onViewComplaints, onViewRoommates, onViewAnnouncements, onEditProfile, onSubmitMaintenance, theme, toggleTheme }) => {
   // FIX: Handle three distinct states for a better user experience.
   if (student === undefined) {
     // State 1: Data is still being fetched.
@@ -90,7 +91,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints
             <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
                 <DashboardButton onClick={onViewAnnouncements} text="View Announcements" icon={<MegaphoneIcon />} />
                 <DashboardButton onClick={onViewComplaints} text="View My Complaints" icon={<ClipboardListIcon />} badgeCount={pendingComplaints} />
-                <DashboardButton onClick={onSubmitComplaint} text="Submit Complaint" icon={<ExclamationIcon />} isDisabled={!room} className="md:col-span-2"/>
+                <DashboardButton onClick={onSubmitComplaint} text="Submit Complaint" icon={<ExclamationIcon />} isDisabled={!room} />
+                <DashboardButton onClick={onSubmitMaintenance} text="Request Maintenance" icon={<WrenchScrewdriverIcon />} isDisabled={!room} />
             </div>
 
             <div className="mt-6">
@@ -99,7 +101,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints
                     <span className="ml-3">Logout</span>
                 </button>
             </div>
-            {!room && <p className="text-center text-xs text-red-500 dark:text-red-400 mt-4">You must be assigned a room to submit a complaint.</p>}
+            {!room && <p className="text-center text-xs text-red-500 dark:text-red-400 mt-4">You must be assigned a room to submit a complaint or request maintenance.</p>}
         </div>
       </div>
     </div>
@@ -149,6 +151,7 @@ const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" classNam
 const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>;
 const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
+const WrenchScrewdriverIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>;
 
 
 export default StudentDashboard;
