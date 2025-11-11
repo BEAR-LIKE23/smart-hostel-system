@@ -8,13 +8,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // which causes an error when comparing against the placeholder string literal.
 const supabaseUrl: string = "https://orybwmgqelmxjqwcpvnc.supabase.co";
 const supabaseKey: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yeWJ3bWdxZWxteGpxd2Nwdm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTI0NTQsImV4cCI6MjA3NjAyODQ1NH0.6_xNtSkgJI64takBwKz4NwiVNZ-QAq4hF8FiFwvG0L0";
-
+const apiKey: string = "AIzaSyDANyz6Uox_MLGrBEHRLRfO7t2F4P9WUx8";
 // --- DO NOT EDIT BELOW THIS LINE ---
 
 // This check verifies that you have replaced the placeholder values.
 const areCredentialsSet = 
   supabaseUrl !== "YOUR_SUPABASE_URL_HERE" && 
-  supabaseKey !== "YOUR_SUPABASE_KEY_HERE";
+  supabaseKey !== "YOUR_SUPABASE_KEY_HERE" && apiKey !== "YOUR_API_KEY_HERE"; 
 
 if (!areCredentialsSet) {
     console.error("SETUP REQUIRED: Supabase credentials are still placeholders. Please update supabaseClient.ts with your actual URL and Key.");

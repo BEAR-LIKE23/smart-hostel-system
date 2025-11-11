@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import type { Session, User } from 'https://esm.sh/@supabase/supabase-js@2';
-import { GoogleGenAI, Type } from '@google/genai';
+import type { Session, User } from '@supabase/supabase-js';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
 import AdminDashboard from './components/Dashboard';
 import StudentDashboard from './components/StudentDashboard';
 import { Modal } from './components/Modal';
 import { Student, Room, Complaint, ModalType, Announcement, MaintenanceRequest } from './types';
-
 
 const App: React.FC = () => {
     // Gracefully handle missing Supabase configuration
@@ -49,6 +48,8 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [userRole, setUserRole] = useState<string | null>(null);
     const [appStatus, setAppStatus] = useState<'loading' | 'ready'>('loading');
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+const [isFetchingData, setIsFetchingData] = useState(false);
+
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
     });
@@ -111,101 +112,252 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
     };
 
+useEffect(() => {
+    let isMounted = true; // Prevent updates after unmount
 
-    useEffect(() => {
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            if (_event === 'PASSWORD_RECOVERY') {
-                setIsUpdatingPassword(true);
-            }
-            
-            setSession(session);
-            
-            if (session) {
-                // Don't fetch data if we are in password recovery mode, wait until it's done.
-                if (_event !== 'PASSWORD_RECOVERY') {
-                    setCurrentStudent(undefined);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        console.log("🔔 [Auth Event]:", _event, "Session exists:", !!session);
+        
+        if (_event === 'PASSWORD_RECOVERY') {
+            setIsUpdatingPassword(true);
+            return;
+        }
+        
+        setSession(session);
+        
+        if (session) {
+            // Don't fetch data if we are in password recovery mode
+            if (_event !== 'PASSWORD_RECOVERY') {
+                setCurrentStudent(undefined);
+                
+                // ⚠️ NEW: Only fetch if component is still mounted
+                if (isMounted) {
                     await fetchData(session.user);
                 }
-            } else {
-                setUserRole(null);
-                setCurrentStudent(null);
             }
-            setAppStatus('ready');
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-
-    const fetchData = async (user: User) => {
-        try {
-            // Securely determine the user's role by calling the database function.
-            const { data: role, error: roleError } = await supabase.rpc('get_user_role');
-            if (roleError) throw roleError;
-            setUserRole(role);
-
-            // All users need to see announcements
-            const { data: announcementsData, error: announcementsError } = await supabase.from('announcements').select('*').order('created_at', { ascending: false });
-            if (announcementsError) throw announcementsError;
-            setAnnouncements(announcementsData || []);
-
-            if (role === 'admin') {
-                const { data: studentsData, error: studentsError } = await supabase.from('students').select('*').order('name', { ascending: true });
-                if (studentsError) throw studentsError;
-                const { data: roomsData, error: roomsError } = await supabase.from('rooms').select('*, students(count)').order('room_number', { ascending: true });
-                if (roomsError) throw roomsError;
-                const { data: complaintsData, error: complaintsError } = await supabase.from('complaints').select('*').order('created_at', { ascending: false });
-                if (complaintsError) throw complaintsError;
-                const { data: maintenanceData, error: maintenanceError } = await supabase.from('maintenance_requests').select('*').order('created_at', { ascending: false });
-                if (maintenanceError) throw maintenanceError;
-
-                setStudents(studentsData || []);
-                setRooms(roomsData || []);
-                setComplaints(complaintsData || []);
-                setMaintenanceRequests(maintenanceData || []);
-            } else { // student
-                // Step 1: Fetch the core student profile.
-                const { data: studentData, error: studentError } = await supabase
-                    .from('students')
-                    .select('*, rooms(*)')
-                    .eq('id', user.id)
-                    .single();
-
-                // If the profile doesn't exist or there's an error, bail out immediately.
-                if (studentError || !studentData) {
-                    console.error("Error fetching student profile or profile not found for user:", user.id, studentError);
-                    setCurrentStudent(null);
-                    return;
-                }
-
-                // Step 2: Profile is valid, now fetch all dependent data.
-                const { data: complaintsData, error: complaintsError } = await supabase.from('complaints').select('*').eq('student_id', user.id).order('created_at', { ascending: false });
-                if (complaintsError) throw complaintsError;
-
-                const { data: maintenanceData, error: maintenanceError } = await supabase.from('maintenance_requests').select('*').eq('student_id', user.id).order('created_at', { ascending: false });
-                if (maintenanceError) throw maintenanceError;
-
-                let roommateData: Pick<Student, 'name'>[] = [];
-                if (studentData.room_id) {
-                    const { data, error: roommateError } = await supabase.from('students').select('name').eq('room_id', studentData.room_id).neq('id', studentData.id);
-                    if (roommateError) throw roommateError;
-                    roommateData = data || [];
-                }
-                
-                // Step 3: All data fetched successfully. Now commit to state.
-                setComplaints(complaintsData || []);
-                setMaintenanceRequests(maintenanceData || []);
-                setRoommates(roommateData);
-                setCurrentStudent(studentData); // This is the final step, preventing partial loads.
-            }
-        } catch (error) {
-            console.error("An error occurred during data fetching:", error);
-            showNotification(`Failed to load data. Please check your connection or contact support.`);
-            if (userRole !== 'admin') {
-                setCurrentStudent(null);
-            }
+        } else {
+            setUserRole(null);
+            setCurrentStudent(null);
         }
+        
+        // ⚠️ IMPORTANT: Only set ready after everything is done
+        if (isMounted) {
+            setAppStatus('ready');
+        }
+    });
+
+    // ⚠️ NEW: Cleanup function
+    return () => {
+        isMounted = false;
+        subscription.unsubscribe();
     };
+}, []); // Empty dependency array - only run once
+
+const fetchData = async (user: User) => {
+  // Prevent concurrent fetches
+  if (isFetchingData) {
+    console.log("⏭️ [fetchData] Already fetching, skipping...");
+    return;
+  }
+
+  setIsFetchingData(true);
+  console.log("🚀 [fetchData] Starting data fetch for user:", user);
+
+  try {
+    console.log("🔹 Step 1: Fetching user role...");
+    
+    // ⚠️ REMOVE the getSession check - it's causing the hang
+    console.log("📊 [Debug] Supabase client URL:", supabase?.supabaseUrl);
+    console.log("📊 [Debug] User ID:", user.id);
+    
+    // Add timeout wrapper
+    const fetchWithTimeout = async (promise: Promise<any>, timeoutMs = 5000) => {
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout after ' + timeoutMs + 'ms')), timeoutMs)
+      );
+      return Promise.race([promise, timeout]);
+    };
+
+    console.log("📊 [Debug] Executing query...");
+    
+    const queryPromise = supabase
+      .from("students")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const { data: studentRoleData, error: studentRoleError } = await fetchWithTimeout(queryPromise) as any;
+    
+    console.log("📊 [Debug] Query completed!");
+    console.log("📊 [Debug] Data:", studentRoleData);
+    console.log("📊 [Debug] Error:", studentRoleError);
+
+    // Check if student record exists
+    if (!studentRoleData) {
+      console.error("❌ [Error] No student record found for user:", user.id);
+      showNotification("Your account setup is incomplete. Please contact the administrator.");
+      setUserRole(null);
+      setCurrentStudent(null);
+      return;
+    }
+
+    if (studentRoleError) {
+      console.error("❌ [Error] Database error:", studentRoleError);
+      throw studentRoleError;
+    }
+
+    const role = studentRoleData?.role;
+    console.log("✅ [Role] Retrieved user role:", role);
+    setUserRole(role);
+
+    // 🔹 Step 2: Fetch announcements
+    console.log("🔹 Step 2: Fetching announcements...");
+    const { data: announcementsData, error: announcementsError } = await supabase
+      .from("announcements")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (announcementsError) throw announcementsError;
+
+    console.log("✅ [Announcements] Retrieved:", announcementsData?.length || 0, "records");
+    setAnnouncements(announcementsData || []);
+
+    // 🔹 Admin-specific data
+    if (role === "admin") {
+      console.log("👑 [Admin] Detected admin role. Fetching admin data...");
+
+      // Fetch students
+      console.log("➡️ Fetching students...");
+const { data: studentsData, error: studentsError } = await supabase
+  .from("students")
+  .select("*")
+  .neq("role", "admin") // exclude admins
+  .order("name", { ascending: true });
+
+      if (studentsError) throw studentsError;
+      console.log("✅ [Students] Retrieved:", studentsData?.length || 0, "records");
+
+      // Fetch rooms
+      console.log("➡️ Fetching rooms...");
+      const { data: roomsData, error: roomError } = await supabase
+        .from("rooms")
+        .select("*, students(count)")
+        .order("room_number", { ascending: true });
+      if (roomError) throw roomError;
+      console.log("✅ [Rooms] Retrieved:", roomsData?.length || 0, "records");
+
+      // Fetch complaints
+      console.log("➡️ Fetching complaints...");
+      const { data: complaintsData, error: complaintsError } = await supabase
+        .from("complaints")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (complaintsError) throw complaintsError;
+      console.log("✅ [Complaints] Retrieved:", complaintsData?.length || 0, "records");
+
+      // Fetch maintenance requests
+      console.log("➡️ Fetching maintenance requests...");
+      const { data: maintenanceData, error: maintenanceError } = await supabase
+        .from("maintenance_requests")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (maintenanceError) throw maintenanceError;
+      console.log("✅ [Maintenance Requests] Retrieved:", maintenanceData?.length || 0, "records");
+
+      // Update state
+      console.log("🧩 [Admin] Updating state with all fetched data...");
+      setStudents(studentsData || []);
+      setRooms(roomsData || []);
+      setComplaints(complaintsData || []);
+      setMaintenanceRequests(maintenanceData || []);
+      console.log("🎉 [Admin] Data loading complete.");
+    }
+
+    // 🔹 Student-specific data
+    else {
+      console.log("🎓 [Student] Detected student role. Fetching student-specific data...");
+
+      // Fetch student profile
+      console.log("➡️ Fetching student profile...");
+      const { data: studentData, error: studentError } = await supabase
+        .from("students")
+        .select("*, rooms(*)")
+        .eq("id", user.id)
+        .single();
+
+      if (studentError || !studentData) {
+        console.error("❌ [Error] Student profile not found for user:", user.id, studentError);
+        setCurrentStudent(null);
+        return;
+      }
+      console.log("✅ [Student Profile] Loaded:", studentData.name);
+
+      // Fetch complaints
+      console.log("➡️ Fetching student complaints...");
+      const { data: complaintsData, error: complaintsError } = await supabase
+        .from("complaints")
+        .select("*")
+        .eq("student_id", user.id)
+        .order("created_at", { ascending: false });
+      if (complaintsError) throw complaintsError;
+      console.log("✅ [Complaints] Retrieved:", complaintsData?.length || 0, "records");
+
+      // Fetch maintenance requests
+      console.log("➡️ Fetching maintenance requests...");
+      const { data: maintenanceData, error: maintenanceError } = await supabase
+        .from("maintenance_requests")
+        .select("*")
+        .eq("student_id", user.id)
+        .order("created_at", { ascending: false });
+      if (maintenanceError) throw maintenanceError;
+      console.log("✅ [Maintenance Requests] Retrieved:", maintenanceData?.length || 0, "records");
+
+      // Fetch roommates
+      let roommateData: Pick<Student, "name">[] = [];
+      if (studentData.room_id) {
+        console.log("➡️ Fetching roommates for room_id:", studentData.room_id);
+        const { data, error: roommateError } = await supabase
+          .from("students")
+          .select("name")
+          .eq("room_id", studentData.room_id)
+          .neq("id", studentData.id);
+        if (roommateError) throw roommateError;
+        roommateData = data || [];
+        console.log("✅ [Roommates] Found:", roommateData?.length || 0);
+      } else {
+        console.log("ℹ️ [Roommates] No room assigned for this student.");
+      }
+
+      // Update state
+      console.log("🧩 [Student] Updating state with fetched data...");
+      setComplaints(complaintsData || []);
+      setMaintenanceRequests(maintenanceData || []);
+      setRoommates(roommateData);
+      setCurrentStudent(studentData);
+
+      console.log("🎉 [Student] Data loading complete.");
+    }
+  } catch (error: any) {
+    console.error("🔥 [Error Handler] An error occurred during data fetching:", error);
+    console.error("🔥 [Error Details]:", {
+      message: error.message,
+      name: error.name,
+      stack: error.stack
+    });
+    
+    showNotification(`Failed to load data: ${error.message}`);
+
+    setUserRole(null);
+    if (userRole !== "admin") {
+      setCurrentStudent(null);
+    }
+  } finally {
+    console.log("🏁 [fetchData] Completing...");
+    setIsFetchingData(false);
+    setAppStatus('ready');
+  }
+};
+
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
@@ -231,10 +383,12 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         showNotification("Allocating rooms... this may take a moment.");
 
         try {
-            const { data: unassignedStudents, error: studentError } = await supabase
-                .from('students')
-                .select('id, gender')
-                .is('room_id', null);
+const { data: unassignedStudents, error: studentError } = await supabase
+  .from("students")
+  .select("id, gender")
+  .is("room_id", null)
+  .neq("role", "admin"); // exclude admins from room allocation
+
 
             const { data: allRooms, error: roomError } = await supabase
                 .from('rooms')
@@ -258,16 +412,22 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
                 }
             }
             
-            if (studentUpdates.length > 0) {
-                 const { error: updateError } = await supabase.from('students').upsert(studentUpdates);
-                 if (updateError) throw updateError;
-            }
+       if (studentUpdates.length > 0) {
+    const { error: updateError } = await supabase
+        .from('students')
+        .update(studentUpdates.map(s => ({ room_id: s.room_id })))
+        .in('id', studentUpdates.map(s => s.id));
+
+    if (updateError) throw updateError;
+}
+
 
             showNotification(`Allocation complete. ${studentUpdates.length} students assigned to rooms.`);
             if (session) await fetchData(session.user);
 
         } catch (err: any) {
             showNotification(`Allocation failed: ${err.message}`);
+            console.log(err);
         } finally {
             setIsAllocating(false);
         }
@@ -380,8 +540,12 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
             showNotification("No student or room selected.");
             return;
         }
-        const { error } = await supabase.from('students').update({ room_id: selectedRoomId }).eq('id', studentToAssign.id);
-
+        console.log(studentToAssign, selectedRoomId);
+const { data, error } = await supabase
+  .from('students')
+  .update({ room_id: selectedRoomId })
+  .eq('id', studentToAssign.id)
+  .select('*');
         if (error) {
             showNotification(`Error assigning room: ${error.message}`);
         } else {
@@ -474,50 +638,56 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
         }
     };
 
-    const handleGenerateAnnouncement = async () => {
-        if (!aiPrompt.trim()) {
-            setFormError("Please enter a topic for the announcement.");
-            return;
-        }
-        setIsGenerating(true);
-        setFormError(null);
-        try {
-            const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            const response = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: `Based on the following points, write a clear and professional announcement for a student hostel. The tone should be informative but friendly. \n\nPoints: "${aiPrompt}"`,
-                config: {
-                    responseMimeType: "application/json",
-                    responseSchema: {
-                        type: Type.OBJECT,
-                        properties: {
-                            title: {
-                                type: Type.STRING,
-                                description: "A concise and informative title for the announcement."
-                            },
-                            content: {
-                                type: Type.STRING,
-                                description: "The full content of the announcement, well-formatted and easy to read."
-                            }
+ const handleGenerateAnnouncement = async () => {
+    if (!aiPrompt.trim()) {
+        setFormError("Please enter a topic for the announcement.");
+        return;
+    }
+    setIsGenerating(true);
+    setFormError(null);
+    try {
+        const genAI = new GoogleGenerativeAI("AIzaSyDANyz6Uox_MLGrBEHRLRfO7t2F4P9WUx8");
+        // console.log("API key:",supabase.apiKey);
+        // console.log(genAI.());
+        const model = genAI.getGenerativeModel({ 
+    model: "models/gemini-2.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        title: {
+                            type: SchemaType.STRING,
+                            description: "A concise and informative title for the announcement."
                         },
-                        required: ["title", "content"]
-                    }
+                        content: {
+                            type:SchemaType.STRING,
+                            description: "The full content of the announcement, well-formatted and easy to read."
+                        }
+                    },
+                    required: ["title", "content"]
                 }
-            });
+            }
+        });
 
-            const result = JSON.parse(response.text);
-            setAnnouncementTitle(result.title);
-            setAnnouncementContent(result.content);
-        } catch (error) {
-            console.error("Error generating announcement:", error);
-            showNotification("Failed to generate announcement. Please try again.");
-            setFormError("AI generation failed. Please check the console for details.");
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
-
+        const result = await model.generateContent(
+            `Based on the following points, write a clear and professional announcement for a student hostel. The tone should be informative but friendly. \n\nPoints: "${aiPrompt}"`
+        );
+        
+        const response = await result.response;
+        const text = response.text();
+        const parsedResult = JSON.parse(text);
+        
+        setAnnouncementTitle(parsedResult.title);
+        setAnnouncementContent(parsedResult.content);
+    } catch (error) {
+        console.error("Error generating announcement:", error);
+        showNotification("Failed to generate announcement. Please try again.");
+        setFormError("AI generation failed. Please check the console for details.");
+    } finally {
+        setIsGenerating(false);
+    }
+};
     const exportToCsv = (data: any[], filename: string) => {
         if (data.length === 0) {
             showNotification("No data to export.");
