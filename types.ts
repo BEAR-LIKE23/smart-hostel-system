@@ -7,6 +7,7 @@ export interface Student {
   gender: 'Male' | 'Female';
   room_id: number | null;
   rooms: Room | null; // Represents the joined room data
+  avatar_url?: string; // NEW: Profile picture URL
 }
 
 export interface Room {

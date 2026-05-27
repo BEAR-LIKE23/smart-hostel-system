@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Student, Complaint, Room } from '../types';
 
 interface StudentDashboardProps {
@@ -14,9 +14,11 @@ interface StudentDashboardProps {
   onSubmitMaintenance: () => void; // New prop for maintenance
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  onUploadAvatar: (file: File) => Promise<void>;
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints, onLogout, onSubmitComplaint, onViewComplaints, onViewRoommates, onViewAnnouncements, onEditProfile, onSubmitMaintenance, theme, toggleTheme }) => {
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints, onLogout, onSubmitComplaint, onViewComplaints, onViewRoommates, onViewAnnouncements, onEditProfile, onSubmitMaintenance, theme, toggleTheme, onUploadAvatar }) => {
+  const [isUploading, setIsUploading] = useState(false);
   // FIX: Handle three distinct states for a better user experience.
   if (student === undefined) {
     // State 1: Data is still being fetched.
@@ -67,6 +69,34 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, complaints
                 </button>
                 <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             </div>
+            
+            <div className="flex flex-col items-center mb-6">
+                <div className="relative group">
+                    {student.avatar_url ? (
+                        <img src={student.avatar_url} alt={student.name} className="w-24 h-24 rounded-full object-cover border-4 border-white dark:border-gray-800 shadow-lg" />
+                    ) : (
+                        <div className="w-24 h-24 rounded-full bg-amber-500 flex items-center justify-center text-white text-3xl font-bold shadow-lg border-4 border-white dark:border-gray-800">
+                            {student.name.charAt(0).toUpperCase()}
+                        </div>
+                    )}
+                    
+                    <label className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        {isUploading ? (
+                            <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        ) : (
+                            <CameraIcon />
+                        )}
+                        <input type="file" className="hidden" accept="image/*" disabled={isUploading} onChange={async (e) => {
+                            if (e.target.files && e.target.files.length > 0) {
+                                setIsUploading(true);
+                                await onUploadAvatar(e.target.files[0]);
+                                setIsUploading(false);
+                            }
+                        }} />
+                    </label>
+                </div>
+            </div>
+
             <div className="text-center">
                 <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 capitalize">Welcome, {student.name}!</h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-2">Here is your hostel information</p>
@@ -152,6 +182,7 @@ const LogoutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 
 const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z" /></svg>;
 const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
 const WrenchScrewdriverIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>;
+const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
 
 
 export default StudentDashboard;

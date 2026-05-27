@@ -170,23 +170,13 @@ const fetchData = async (user: User) => {
     console.log("📊 [Debug] Supabase client URL:", (supabase as any)?.supabaseUrl);
     console.log("📊 [Debug] User ID:", user.id);
     
-    // Add timeout wrapper
-    const fetchWithTimeout = async (promise: Promise<any>, timeoutMs = 15000) => {
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout after ' + timeoutMs + 'ms')), timeoutMs)
-      );
-      return Promise.race([promise, timeout]);
-    };
-
-    console.log("📊 [Debug] Executing query...");
-    
     const queryPromise = supabase
       .from("students")
       .select("role")
       .eq("id", user.id)
       .maybeSingle();
 
-    const { data: studentRoleData, error: studentRoleError } = await fetchWithTimeout(queryPromise as any) as any;
+    const { data: studentRoleData, error: studentRoleError } = await queryPromise;
     
     console.log("📊 [Debug] Query completed!");
     console.log("📊 [Debug] Data:", studentRoleData);
@@ -346,11 +336,8 @@ const { data: studentsData, error: studentsError } = await supabase
     });
     
     showNotification(`Failed to load data: ${error.message}`);
-
-    setUserRole(null);
-    if (userRole !== "admin") {
-      setCurrentStudent(null);
-    }
+    // We intentionally DO NOT clear the state here so that a temporary network timeout
+    // doesn't cause the "Profile Not Found" screen to appear if data was already loaded.
   } finally {
     console.log("🏁 [fetchData] Completing...");
     setIsFetchingData(false);
@@ -611,6 +598,43 @@ const { data, error } = await supabase
             showNotification("Profile updated successfully!");
             setCurrentStudent({ ...currentStudent, name: editedName, level: editedLevel });
             closeModal();
+        }
+    };
+
+    const handleUploadAvatar = async (file: File) => {
+        if (!currentStudent || !session) return;
+        
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${currentStudent.id}-${Math.random()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file, { upsert: true });
+
+            if (uploadError) {
+                throw uploadError;
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            const { error: updateError } = await supabase
+                .from('students')
+                .update({ avatar_url: publicUrl })
+                .eq('id', currentStudent.id);
+
+            if (updateError) {
+                throw updateError;
+            }
+
+            setCurrentStudent({ ...currentStudent, avatar_url: publicUrl });
+            showNotification("Profile picture updated successfully!");
+        } catch (error: any) {
+            console.error("Upload error:", error);
+            showNotification(`Failed to upload picture: ${error.message}`);
         }
     };
 
@@ -1309,6 +1333,7 @@ const { data, error } = await supabase
                     onSubmitMaintenance={() => openModal('submitMaintenance')}
                     theme={theme}
                     toggleTheme={toggleTheme}
+                    onUploadAvatar={handleUploadAvatar}
                 />
             )}
 
