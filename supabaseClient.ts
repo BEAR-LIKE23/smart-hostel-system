@@ -1,4 +1,4 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from '@supabase/supabase-js';
 
 // --- DATABASE CONFIGURATION ---
 // Please replace the placeholder values below with your actual Supabase credentials.
@@ -6,8 +6,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 // FIX: Explicitly type constants as `string` to prevent TypeScript from inferring a too-specific literal type,
 // which causes an error when comparing against the placeholder string literal.
-const supabaseUrl: string = "https://orybwmgqelmxjqwcpvnc.supabase.co";
-const supabaseKey: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9yeWJ3bWdxZWxteGpxd2Nwdm5jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTI0NTQsImV4cCI6MjA3NjAyODQ1NH0.6_xNtSkgJI64takBwKz4NwiVNZ-QAq4hF8FiFwvG0L0";
+const supabaseUrl: string = "https://cyzstcawibjckrijprcy.supabase.co";
+const supabaseKey: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5enN0Y2F3aWJqY2tyaWpwcmN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODA1ODAsImV4cCI6MjA5NTQ1NjU4MH0.qb_Dtik5fRW-x3XR_6qDHJkvuSZ1tuV4zdxa3WuNkko";
 const apiKey: string = "AIzaSyDANyz6Uox_MLGrBEHRLRfO7t2F4P9WUx8";
 // --- DO NOT EDIT BELOW THIS LINE ---
 
