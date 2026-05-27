@@ -224,50 +224,26 @@ const fetchData = async (user: User) => {
     if (role === "admin") {
       console.log("👑 [Admin] Detected admin role. Fetching admin data...");
 
-      // Fetch students
-      console.log("➡️ Fetching students...");
-const { data: studentsData, error: studentsError } = await supabase
-  .from("students")
-  .select("*")
-  .neq("role", "admin") // exclude admins
-  .order("name", { ascending: true });
+      // Fetch admin data concurrently
+      console.log("➡️ Fetching admin data in parallel...");
+      const [studentsRes, roomsRes, complaintsRes, maintenanceRes] = await Promise.all([
+        supabase.from("students").select("*").neq("role", "admin").order("name", { ascending: true }),
+        supabase.from("rooms").select("*, students(count)").order("room_number", { ascending: true }),
+        supabase.from("complaints").select("*").order("created_at", { ascending: false }),
+        supabase.from("maintenance_requests").select("*").order("created_at", { ascending: false })
+      ]);
 
-      if (studentsError) throw studentsError;
-      console.log("✅ [Students] Retrieved:", studentsData?.length || 0, "records");
-
-      // Fetch rooms
-      console.log("➡️ Fetching rooms...");
-      const { data: roomsData, error: roomError } = await supabase
-        .from("rooms")
-        .select("*, students(count)")
-        .order("room_number", { ascending: true });
-      if (roomError) throw roomError;
-      console.log("✅ [Rooms] Retrieved:", roomsData?.length || 0, "records");
-
-      // Fetch complaints
-      console.log("➡️ Fetching complaints...");
-      const { data: complaintsData, error: complaintsError } = await supabase
-        .from("complaints")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (complaintsError) throw complaintsError;
-      console.log("✅ [Complaints] Retrieved:", complaintsData?.length || 0, "records");
-
-      // Fetch maintenance requests
-      console.log("➡️ Fetching maintenance requests...");
-      const { data: maintenanceData, error: maintenanceError } = await supabase
-        .from("maintenance_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (maintenanceError) throw maintenanceError;
-      console.log("✅ [Maintenance Requests] Retrieved:", maintenanceData?.length || 0, "records");
+      if (studentsRes.error) throw studentsRes.error;
+      if (roomsRes.error) throw roomsRes.error;
+      if (complaintsRes.error) throw complaintsRes.error;
+      if (maintenanceRes.error) throw maintenanceRes.error;
 
       // Update state
       console.log("🧩 [Admin] Updating state with all fetched data...");
-      setStudents(studentsData || []);
-      setRooms(roomsData || []);
-      setComplaints(complaintsData || []);
-      setMaintenanceRequests(maintenanceData || []);
+      setStudents(studentsRes.data || []);
+      setRooms(roomsRes.data || []);
+      setComplaints(complaintsRes.data || []);
+      setMaintenanceRequests(maintenanceRes.data || []);
       console.log("🎉 [Admin] Data loading complete.");
     }
 
@@ -290,41 +266,26 @@ const { data: studentsData, error: studentsError } = await supabase
       }
       console.log("✅ [Student Profile] Loaded:", studentData.name);
 
-      // Fetch complaints
-      console.log("➡️ Fetching student complaints...");
-      const { data: complaintsData, error: complaintsError } = await supabase
-        .from("complaints")
-        .select("*")
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false });
-      if (complaintsError) throw complaintsError;
-      console.log("✅ [Complaints] Retrieved:", complaintsData?.length || 0, "records");
+      // Fetch complaints, maintenance, and roommates concurrently!
+      console.log("➡️ Fetching auxiliary student data in parallel...");
+      
+      const roommatesPromise = studentData.room_id 
+        ? supabase.from("students").select("name").eq("room_id", studentData.room_id).neq("id", studentData.id)
+        : Promise.resolve({ data: [], error: null });
 
-      // Fetch maintenance requests
-      console.log("➡️ Fetching maintenance requests...");
-      const { data: maintenanceData, error: maintenanceError } = await supabase
-        .from("maintenance_requests")
-        .select("*")
-        .eq("student_id", user.id)
-        .order("created_at", { ascending: false });
-      if (maintenanceError) throw maintenanceError;
-      console.log("✅ [Maintenance Requests] Retrieved:", maintenanceData?.length || 0, "records");
+      const [complaintsRes, maintenanceRes, roommatesRes] = await Promise.all([
+        supabase.from("complaints").select("*").eq("student_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("maintenance_requests").select("*").eq("student_id", user.id).order("created_at", { ascending: false }),
+        roommatesPromise
+      ]);
 
-      // Fetch roommates
-      let roommateData: Pick<Student, "name">[] = [];
-      if (studentData.room_id) {
-        console.log("➡️ Fetching roommates for room_id:", studentData.room_id);
-        const { data, error: roommateError } = await supabase
-          .from("students")
-          .select("name")
-          .eq("room_id", studentData.room_id)
-          .neq("id", studentData.id);
-        if (roommateError) throw roommateError;
-        roommateData = data || [];
-        console.log("✅ [Roommates] Found:", roommateData?.length || 0);
-      } else {
-        console.log("ℹ️ [Roommates] No room assigned for this student.");
-      }
+      if (complaintsRes.error) throw complaintsRes.error;
+      if (maintenanceRes.error) throw maintenanceRes.error;
+      if (roommatesRes.error) throw roommatesRes.error;
+
+      const complaintsData = complaintsRes.data;
+      const maintenanceData = maintenanceRes.data;
+      const roommateData = roommatesRes.data || [];
 
       // Update state
       console.log("🧩 [Student] Updating state with fetched data...");
