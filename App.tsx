@@ -118,7 +118,7 @@ useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         console.log("🔔 [Auth Event]:", _event, "Session exists:", !!session);
         
-        if (_event === 'PASSWORD_RECOVERY') {
+        if ((_event as string) === 'PASSWORD_RECOVERY') {
             setIsUpdatingPassword(true);
             return;
         }
@@ -127,7 +127,7 @@ useEffect(() => {
         
         if (session) {
             // Don't fetch data if we are in password recovery mode
-            if (_event !== 'PASSWORD_RECOVERY') {
+            if ((_event as string) !== 'PASSWORD_RECOVERY') {
                 setCurrentStudent(undefined);
                 
                 // ⚠️ NEW: Only fetch if component is still mounted
@@ -167,11 +167,11 @@ const fetchData = async (user: User) => {
     console.log("🔹 Step 1: Fetching user role...");
     
     // ⚠️ REMOVE the getSession check - it's causing the hang
-    console.log("📊 [Debug] Supabase client URL:", supabase?.supabaseUrl);
+    console.log("📊 [Debug] Supabase client URL:", (supabase as any)?.supabaseUrl);
     console.log("📊 [Debug] User ID:", user.id);
     
     // Add timeout wrapper
-    const fetchWithTimeout = async (promise: Promise<any>, timeoutMs = 5000) => {
+    const fetchWithTimeout = async (promise: Promise<any>, timeoutMs = 15000) => {
       const timeout = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout after ' + timeoutMs + 'ms')), timeoutMs)
       );
@@ -186,7 +186,7 @@ const fetchData = async (user: User) => {
       .eq("id", user.id)
       .maybeSingle();
 
-    const { data: studentRoleData, error: studentRoleError } = await fetchWithTimeout(queryPromise) as any;
+    const { data: studentRoleData, error: studentRoleError } = await fetchWithTimeout(queryPromise as any) as any;
     
     console.log("📊 [Debug] Query completed!");
     console.log("📊 [Debug] Data:", studentRoleData);
