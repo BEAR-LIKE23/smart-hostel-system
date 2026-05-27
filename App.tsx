@@ -114,9 +114,15 @@ const [isFetchingData, setIsFetchingData] = useState(false);
 
 useEffect(() => {
     let isMounted = true; // Prevent updates after unmount
+    let isFetchingLock = false; // NEW: Proper lock to prevent rapid concurrent fetches
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
         console.log("🔔 [Auth Event]:", _event, "Session exists:", !!session);
+        
+        if (isFetchingLock) {
+            console.log("⏭️ [Auth Event] Already fetching, skipping this rapid event...");
+            return;
+        }
         
         if ((_event as string) === 'PASSWORD_RECOVERY') {
             setIsUpdatingPassword(true);
@@ -130,9 +136,10 @@ useEffect(() => {
             if ((_event as string) !== 'PASSWORD_RECOVERY') {
                 setCurrentStudent(undefined);
                 
-                // ⚠️ NEW: Only fetch if component is still mounted
                 if (isMounted) {
+                    isFetchingLock = true;
                     await fetchData(session.user);
+                    isFetchingLock = false;
                 }
             }
         } else {
@@ -154,12 +161,6 @@ useEffect(() => {
 }, []); // Empty dependency array - only run once
 
 const fetchData = async (user: User) => {
-  // Prevent concurrent fetches
-  if (isFetchingData) {
-    console.log("⏭️ [fetchData] Already fetching, skipping...");
-    return;
-  }
-
   setIsFetchingData(true);
   console.log("🚀 [fetchData] Starting data fetch for user:", user);
 
@@ -169,14 +170,21 @@ const fetchData = async (user: User) => {
     // ⚠️ REMOVE the getSession check - it's causing the hang
     console.log("📊 [Debug] Supabase client URL:", (supabase as any)?.supabaseUrl);
     console.log("📊 [Debug] User ID:", user.id);
+    console.log("📊 [Debug] Executing query...");
     
+    // Safety timeout of 10 seconds
+    const fetchWithTimeout = (promise: Promise<any>) => {
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 10000));
+      return Promise.race([promise, timeout]);
+    };
+
     const queryPromise = supabase
       .from("students")
       .select("role")
       .eq("id", user.id)
       .maybeSingle();
 
-    const { data: studentRoleData, error: studentRoleError } = await queryPromise;
+    const { data: studentRoleData, error: studentRoleError } = await fetchWithTimeout(queryPromise as any) as any;
     
     console.log("📊 [Debug] Query completed!");
     console.log("📊 [Debug] Data:", studentRoleData);
@@ -336,8 +344,11 @@ const { data: studentsData, error: studentsError } = await supabase
     });
     
     showNotification(`Failed to load data: ${error.message}`);
-    // We intentionally DO NOT clear the state here so that a temporary network timeout
-    // doesn't cause the "Profile Not Found" screen to appear if data was already loaded.
+    // If we crash before loading the profile, we MUST set it to null so it doesn't get stuck on "Loading student data..."
+    setUserRole(null);
+    if (userRole !== "admin") {
+      setCurrentStudent(null);
+    }
   } finally {
     console.log("🏁 [fetchData] Completing...");
     setIsFetchingData(false);
