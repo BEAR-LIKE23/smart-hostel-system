@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-const Login: React.FC = () => {
-  const [view, setView] = useState<'signin' | 'signup' | 'verify_otp' | 'forgot_password'>('signin');
+interface LoginProps {
+  onBack?: () => void;
+  initialView?: 'signin' | 'signup';
+}
+
+const Login: React.FC<LoginProps> = ({ onBack, initialView = 'signin' }) => {
+  const [view, setView] = useState<'signin' | 'signup' | 'verify_otp' | 'forgot_password'>(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -13,7 +18,6 @@ const Login: React.FC = () => {
   const [message, setMessage] = useState<string | null>(null);
   
   const [otp, setOtp] = useState('');
-
   const [resendCooldown, setResendCooldown] = useState(0);
 
   useEffect(() => {
@@ -45,18 +49,10 @@ const Login: React.FC = () => {
 
         if (signUpError) throw signUpError;
         
-        // If email confirmation is disabled, the user is logged in instantly.
-        // The `user` object will exist, but `session` will be null until the next page load.
-        // If email confirmation is ON, `user` exists but is not confirmed.
         if (data.user) {
-            // A user object exists, but they might not have a session yet if email confirmation is required.
-            // Supabase now generally requires confirmation. We check if a session was created.
-            // If not, we assume OTP is needed.
             if (data.session) {
-                // Email confirmation is likely disabled. Reload to log the user in.
                 window.location.reload();
             } else {
-                // Standard flow: email confirmation is required.
                 setView('verify_otp');
                 setResendCooldown(60);
             }
@@ -75,13 +71,13 @@ const Login: React.FC = () => {
       setLoading(false);
     }
   };
-const handleVerifyOtp = async (e: React.FormEvent) => {      
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {      
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
-        // Step 1: Verify the OTP
         const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
             email,
             token: otp,
@@ -91,7 +87,6 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
         if (verifyError) throw verifyError;
         if (!session?.user) throw new Error("Verification successful, but no user session found.");
 
-        // ⭐ CRITICAL FIX: Set the session BEFORE any queries
         const { error: sessionError } = await supabase.auth.setSession({
             access_token: session.access_token,
             refresh_token: session.refresh_token
@@ -99,7 +94,6 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
 
         if (sessionError) throw sessionError;
 
-        // Step 2: Poll for the student profile to ensure it's created by the trigger.
         setMessage("Verification successful! Finalizing your profile...");
         const user = session.user;
         let profileFound = false;
@@ -124,7 +118,6 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
             throw new Error("Your account was created, but we couldn't find your student profile. Please try logging in.");
         }
         
-        // Step 3: Force reload
         setMessage("Profile ready! Redirecting...");
         setTimeout(() => {
             window.location.reload();
@@ -135,7 +128,8 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
         setError(err.error_description || err.message);
         setLoading(false);
     }
-};
+  };
+
   const handleResendOtp = async () => {
     if (resendCooldown > 0) return;
     
@@ -177,7 +171,6 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
     }
   };
 
-
   const switchView = (newView: typeof view) => {
     setView(newView);
     setError(null);
@@ -191,42 +184,46 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
     }
   };
 
+  // Shared classes for styling to keep things clean and reusable
+  const inputClass = "appearance-none relative block w-full px-4 py-3 bg-white/40 dark:bg-black/30 border border-gray-300/40 dark:border-gray-700/40 text-gray-900 dark:text-white rounded-xl placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 sm:text-sm shadow-inner";
+  const btnClass = "group relative w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 dark:from-blue-500 dark:to-indigo-500 dark:hover:from-blue-600 dark:hover:to-indigo-600 shadow-lg shadow-blue-500/20 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none";
+
   if (view === 'verify_otp') {
     return (
-       <div className="min-h-screen flex items-center justify-center bg-amber-50 dark:bg-gray-900 p-4">
-        <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+       <div className="min-h-screen flex items-center justify-center bg-transparent p-4 transition-colors duration-300">
+        <div className="relative w-full max-w-md p-8 sm:p-10 space-y-8 backdrop-blur-xl bg-white/50 dark:bg-gray-950/50 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-blue-500 before:to-indigo-500 before:rounded-t-3xl">
             <div className="text-center">
-                <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">Check Your Email</h1>
-                <p className="mt-2 text-gray-500 dark:text-gray-400">We've sent a 6-digit verification code to <strong className="font-medium text-gray-700 dark:text-gray-300">{email}</strong>.</p>
+                <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Check Your Email</h1>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">We've sent a 6-digit verification code to <strong className="font-semibold text-gray-700 dark:text-gray-200">{email}</strong>.</p>
             </div>
-            <form className="mt-8 space-y-4" onSubmit={handleVerifyOtp}>
+            <form className="space-y-6" onSubmit={handleVerifyOtp}>
                 <input 
                     name="otp" 
                     type="text" 
                     required 
-                    className="appearance-none text-center tracking-[1em] relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-lg dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" 
+                    className="appearance-none text-center tracking-[0.8em] pl-[0.8em] relative block w-full px-4 py-3 bg-white/40 dark:bg-black/30 border border-gray-300/40 dark:border-gray-700/40 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all sm:text-lg shadow-inner" 
                     placeholder="______" 
                     value={otp} 
                     onChange={(e) => setOtp(e.target.value)} 
                     maxLength={6}
                 />
-                 {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-                 {message && <p className="text-sm text-green-600 text-center">{message}</p>}
+                 {error && <p className="text-xs text-red-500 text-center font-medium bg-red-50 dark:bg-red-950/30 py-2 px-3 rounded-lg border border-red-200/50 dark:border-red-900/50">{error}</p>}
+                 {message && <p className="text-xs text-green-600 text-center font-medium bg-green-50 dark:bg-green-950/30 py-2 px-3 rounded-lg border border-green-200/50 dark:border-green-900/50">{message}</p>}
                 <div>
-                    <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:bg-amber-300 dark:disabled:bg-amber-800">
+                    <button type="submit" disabled={loading} className={btnClass}>
                         {loading ? 'Verifying...' : 'Verify Account'}
                     </button>
                 </div>
             </form>
-             <div className="text-center text-sm space-y-2">
+             <div className="text-center text-sm space-y-3 pt-2">
                 <button 
                     onClick={handleResendOtp} 
                     disabled={resendCooldown > 0 || loading}
-                    className="font-medium text-amber-600 hover:text-amber-500 disabled:text-gray-400 disabled:cursor-not-allowed dark:text-amber-400 dark:hover:text-amber-300 dark:disabled:text-gray-500">
+                    className="font-semibold text-blue-600 hover:text-blue-700 disabled:text-gray-400 disabled:cursor-not-allowed dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
                      {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend Code'}
                 </button>
                 <p>
-                    <button onClick={() => switchView('signin')} className="font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                    <button onClick={() => switchView('signin')} className="font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors">
                         Go Back
                     </button>
                 </p>
@@ -238,24 +235,35 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
 
   if (view === 'forgot_password') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-amber-50 dark:bg-gray-900 p-4">
-        <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+      <div className="min-h-screen flex items-center justify-center bg-transparent p-4 transition-colors duration-300">
+        <div className="relative w-full max-w-md p-8 sm:p-10 space-y-8 backdrop-blur-xl bg-white/50 dark:bg-gray-950/50 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-blue-500 before:to-indigo-500 before:rounded-t-3xl">
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="inline-flex items-center text-xs font-bold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            >
+              <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Home
+            </button>
+          )}
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">Reset Password</h1>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">Enter your email to receive reset instructions.</p>
+            <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Reset Password</h1>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Enter your email to receive reset instructions.</p>
           </div>
-          <form className="mt-8 space-y-4" onSubmit={handleForgotPassword}>
-            <input id="email" name="email" type="email" autoComplete="email" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
-            {error && <p className="text-sm text-red-600 text-center">{error}</p>}
-            {message && <p className="text-sm text-green-600 text-center">{message}</p>}
+          <form className="space-y-6" onSubmit={handleForgotPassword}>
+            <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
+            {error && <p className="text-xs text-red-500 text-center font-medium bg-red-50 dark:bg-red-950/30 py-2 px-3 rounded-lg border border-red-200/50 dark:border-red-900/50">{error}</p>}
+            {message && <p className="text-xs text-green-600 text-center font-medium bg-green-50 dark:bg-green-950/30 py-2 px-3 rounded-lg border border-green-200/50 dark:border-green-900/50">{message}</p>}
             <div>
-              <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:bg-amber-300 dark:disabled:bg-amber-800">
+              <button type="submit" disabled={loading} className={btnClass}>
                 {loading ? 'Sending...' : 'Send Reset Instructions'}
               </button>
             </div>
           </form>
-          <p className="text-center text-sm">
-            <button onClick={() => switchView('signin')} className="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+          <p className="text-center text-sm pt-2">
+            <button onClick={() => switchView('signin')} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
               Back to Sign In
             </button>
           </p>
@@ -265,49 +273,78 @@ const handleVerifyOtp = async (e: React.FormEvent) => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-amber-50 dark:bg-gray-900 p-4">
-      <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+    <div className="min-h-screen flex items-center justify-center bg-transparent p-4 transition-colors duration-300">
+      <div className="relative w-full max-w-md p-8 sm:p-10 space-y-6 backdrop-blur-xl bg-white/50 dark:bg-gray-950/50 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-blue-500 before:to-indigo-500 before:rounded-t-3xl">
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="inline-flex items-center text-xs font-bold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Home
+          </button>
+        )}
+        
         <div className="text-center">
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">{view === 'signup' ? 'Create Account' : 'Hostel Login'}</h1>
-            <p className="mt-2 text-gray-500 dark:text-gray-400">{view === 'signup' ? 'Get started by creating your student account' : 'Sign in to manage your hostel'}</p>
+            <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
+              {view === 'signup' ? 'Create Account' : 'Hostel Login'}
+            </h1>
+            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              {view === 'signup' ? 'Get started by creating your student profile' : 'Sign in to manage your hostel'}
+            </p>
         </div>
 
-        <form className="mt-8 space-y-4" onSubmit={handleAuthAction}>
-          <div className="rounded-md shadow-sm space-y-2">
+        <form className="space-y-4 pt-2" onSubmit={handleAuthAction}>
+          <div className="space-y-3">
             {view === 'signup' && (
               <>
-                 <input name="name" type="text" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
-                 <input name="level" type="text" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Level (e.g., 100L)" value={level} onChange={(e) => setLevel(e.target.value)} />
-                 <select name="gender" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 bg-white text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={gender} onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}>
-                     <option>Male</option>
-                     <option>Female</option>
-                 </select>
+                 <input name="name" type="text" required className={inputClass} placeholder="Full Name" value={name} onChange={(e) => setName(e.target.value)} />
+                 <input name="level" type="text" required className={inputClass} placeholder="Level (e.g., 100L)" value={level} onChange={(e) => setLevel(e.target.value)} />
+                 
+                 <div className="relative">
+                   <select 
+                     name="gender" 
+                     required 
+                     className="appearance-none relative block w-full px-4 py-3 bg-white/40 dark:bg-black/30 border border-gray-300/40 dark:border-gray-700/40 text-gray-900 dark:text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 sm:text-sm shadow-inner cursor-pointer" 
+                     value={gender} 
+                     onChange={(e) => setGender(e.target.value as 'Male' | 'Female')}
+                   >
+                       <option value="Male" className="dark:bg-gray-900">Male</option>
+                       <option value="Female" className="dark:bg-gray-900">Female</option>
+                   </select>
+                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 dark:text-gray-400">
+                     <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                   </div>
+                 </div>
               </>
             )}
-            <input id="email" name="email" type="email" autoComplete="email" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input id="password" name="password" type="password" autoComplete="current-password" required className="appearance-none relative block w-full px-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input id="email" name="email" type="email" autoComplete="email" required className={inputClass} placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input id="password" name="password" type="password" autoComplete="current-password" required className={inputClass} placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
           
           {view === 'signin' && (
              <div className="flex items-center justify-end">
-                <div className="text-sm">
-                    <button type="button" onClick={() => switchView('forgot_password')} className="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+                <div className="text-xs">
+                    <button type="button" onClick={() => switchView('forgot_password')} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
                         Forgot your password?
                     </button>
                 </div>
              </div>
           )}
 
-          {error && <p className="text-sm text-red-600 text-center">{error}</p>}
+          {error && <p className="text-xs text-red-500 text-center font-medium bg-red-50 dark:bg-red-950/30 py-2 px-3 rounded-lg border border-red-200/50 dark:border-red-900/50">{error}</p>}
 
-          <div>
-            <button type="submit" disabled={loading} className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors disabled:bg-amber-300 dark:disabled:bg-amber-800">
+          <div className="pt-2">
+            <button type="submit" disabled={loading} className={btnClass}>
               {loading ? 'Processing...' : (view === 'signup' ? 'Sign Up' : 'Sign In')}
             </button>
           </div>
         </form>
-        <p className="text-center text-sm">
-          <button onClick={() => switchView(view === 'signup' ? 'signin' : 'signup')} className="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300">
+        
+        <p className="text-center text-sm pt-2">
+          <button onClick={() => switchView(view === 'signup' ? 'signin' : 'signup')} className="font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
             {view === 'signup' ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
           </button>
         </p>

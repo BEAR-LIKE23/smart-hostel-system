@@ -42,9 +42,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     toggleTheme,
 }) => {
   return (
-    <div className="min-h-screen bg-green-50 dark:bg-gray-900 flex flex-col items-center justify-center p-4 transition-colors duration-300">
+    <div className="min-h-screen bg-transparent flex flex-col items-center justify-center p-4 transition-colors duration-300">
       <div className="w-full max-w-4xl text-center">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 relative">
+        <div className="backdrop-blur-md bg-white/80 dark:bg-gray-900/80 rounded-2xl shadow-lg p-8 relative border border-gray-200/50 dark:border-gray-700/50">
             <div className="absolute top-4 right-4">
                 <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             </div>

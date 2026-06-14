@@ -3,6 +3,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 import { supabase } from './supabaseClient';
 import Login from './components/Login';
+import HomePage from './components/Homepage';
 import AdminDashboard from './components/Dashboard';
 import StudentDashboard from './components/StudentDashboard';
 import { Modal } from './components/Modal';
@@ -48,7 +49,9 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [userRole, setUserRole] = useState<string | null>(null);
     const [appStatus, setAppStatus] = useState<'loading' | 'ready'>('loading');
     const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-const [isFetchingData, setIsFetchingData] = useState(false);
+    const [isFetchingData, setIsFetchingData] = useState(false);
+    const [viewingLandingPage, setViewingLandingPage] = useState(true);
+    const [loginInitialView, setLoginInitialView] = useState<'signin' | 'signup'>('signin');
 
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
@@ -132,6 +135,7 @@ useEffect(() => {
         setSession(session);
         
         if (session) {
+            setViewingLandingPage(false);
             // Don't fetch data if we are in password recovery mode
             if ((_event as string) !== 'PASSWORD_RECOVERY') {
                 setCurrentStudent(undefined);
@@ -330,6 +334,7 @@ const fetchData = async (user: User) => {
         setCurrentStudent(null);
         setRoommates([]);
         setIsUpdatingPassword(false);
+        setViewingLandingPage(true);
     };
 
     const showNotification = (message: string) => {
@@ -1271,8 +1276,40 @@ const { data, error } = await supabase
     }
 
     return (
-        <div className="font-sans">
-            {!session ? <Login /> : (
+        <div className="font-sans min-h-screen relative overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+            {/* Universal Animated Moving Background */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+                {/* Background Image of Campus with Ken Burns effect */}
+                <div 
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.16] dark:opacity-[0.10] transition-opacity duration-300 scale-105 animate-ken-burns"
+                    style={{ backgroundImage: "url('/university_campus.png')" }}
+                ></div>
+                {/* Moving grid */}
+                <div className="absolute inset-0 bg-grid-pattern animate-grid-drift"></div>
+                {/* Moving blur blobs */}
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 dark:bg-blue-900/10 blur-[120px] animate-blob1"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-900/10 blur-[120px] animate-blob2"></div>
+                <div className="absolute top-[30%] right-[10%] w-[40%] h-[40%] rounded-full bg-indigo-400/15 dark:bg-indigo-950/10 blur-[100px] animate-blob3"></div>
+            </div>
+
+            <div className="relative z-10 min-h-screen flex flex-col">
+                {!session ? (
+                viewingLandingPage ? (
+                    <HomePage 
+                        onEnterApp={(view = 'signin') => {
+                            setLoginInitialView(view);
+                            setViewingLandingPage(false);
+                        }}
+                        theme={theme}
+                        toggleTheme={toggleTheme}
+                    />
+                ) : (
+                    <Login 
+                        onBack={() => setViewingLandingPage(true)}
+                        initialView={loginInitialView}
+                    />
+                )
+            ) : (
                 userRole === 'admin' ? 
                 <AdminDashboard 
                     username={session.user.email || 'Admin'}
@@ -1325,7 +1362,64 @@ const { data, error } = await supabase
             <style>{`
                 @keyframes fade-in-up { 0% { opacity: 0; transform: translateY(20px); } 100% { opacity: 1; transform: translateY(0); } }
                 .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
+
+                @keyframes grid-drift {
+                    0% { background-position: 0 0; }
+                    100% { background-position: 40px 40px; }
+                }
+                .animate-grid-drift {
+                    animation: grid-drift 20s linear infinite;
+                }
+
+                @keyframes blob1 {
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    33% { transform: translate(30px, -40px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.95); }
+                    100% { transform: translate(0px, 0px) scale(1); }
+                }
+                @keyframes blob2 {
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    33% { transform: translate(-40px, 30px) scale(0.9); }
+                    66% { transform: translate(30px, -20px) scale(1.05); }
+                    100% { transform: translate(0px, 0px) scale(1); }
+                }
+                @keyframes blob3 {
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    50% { transform: translate(20px, -30px) scale(1.03); }
+                    100% { transform: translate(0px, 0px) scale(1); }
+                }
+                .animate-blob1 {
+                    animation: blob1 25s infinite ease-in-out;
+                }
+                .animate-blob2 {
+                    animation: blob2 20s infinite ease-in-out;
+                }
+                .animate-blob3 {
+                    animation: blob3 22s infinite ease-in-out;
+                }
+
+                @keyframes ken-burns {
+                    0% { transform: scale(1.05) translate(0px, 0px); }
+                    50% { transform: scale(1.12) translate(8px, -8px); }
+                    100% { transform: scale(1.05) translate(0px, 0px); }
+                }
+                .animate-ken-burns {
+                    animation: ken-burns 45s ease-in-out infinite;
+                }
+
+                .bg-grid-pattern {
+                    background-size: 40px 40px;
+                    background-image: 
+                        linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+                }
+                .dark .bg-grid-pattern {
+                    background-image: 
+                        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+                }
             `}</style>
+            </div>
         </div>
     );
 };
