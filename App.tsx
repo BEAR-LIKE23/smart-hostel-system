@@ -52,6 +52,7 @@ const supabaseKey = "YOUR_SUPABASE_KEY_HERE";`}
     const [isFetchingData, setIsFetchingData] = useState(false);
     const [viewingLandingPage, setViewingLandingPage] = useState(true);
     const [loginInitialView, setLoginInitialView] = useState<'signin' | 'signup'>('signin');
+    const [connectionError, setConnectionError] = useState<string | null>(null);
 
     const [theme, setTheme] = useState<'light' | 'dark'>(() => {
         return (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
@@ -136,6 +137,12 @@ useEffect(() => {
         
         if (session) {
             setViewingLandingPage(false);
+
+            // ⚠️ Avoid refetching data and showing loaders on silent background events like token refreshes
+            if ((_event as string) === 'TOKEN_REFRESHED' || (_event as string) === 'USER_UPDATED') {
+                return;
+            }
+
             // Don't fetch data if we are in password recovery mode
             if ((_event as string) !== 'PASSWORD_RECOVERY') {
                 setCurrentStudent(undefined);
@@ -166,6 +173,7 @@ useEffect(() => {
 
 const fetchData = async (user: User) => {
   setIsFetchingData(true);
+  setConnectionError(null);
   console.log("🚀 [fetchData] Starting data fetch for user:", user);
 
   try {
@@ -178,7 +186,7 @@ const fetchData = async (user: User) => {
     
     // Safety timeout of 10 seconds
     const fetchWithTimeout = (promise: Promise<any>) => {
-      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Request timeout')), 10000));
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Database connection timeout (please check if your Supabase database is paused or sleeping)')), 10000));
       return Promise.race([promise, timeout]);
     };
 
@@ -309,10 +317,14 @@ const fetchData = async (user: User) => {
     });
     
     showNotification(`Failed to load data: ${error.message}`);
-    // If we crash before loading the profile, we MUST set it to null so it doesn't get stuck on "Loading student data..."
-    setUserRole(null);
-    if (userRole !== "admin") {
-      setCurrentStudent(null);
+    
+    if (error.message.includes('timeout') || error.message.includes('Fetch') || error.message.includes('network') || error.message.includes('connection')) {
+        setConnectionError(error.message);
+    } else {
+        setUserRole(null);
+        if (userRole !== "admin") {
+          setCurrentStudent(null);
+        }
     }
   } finally {
     console.log("🏁 [fetchData] Completing...");
@@ -1264,8 +1276,16 @@ const { data, error } = await supabase
     const pendingMaintenanceCount = maintenanceRequests.filter(r => r.status !== 'Completed').length; // NEW
     
     if (appStatus === 'loading') {
-        // Return a blank background instead of a loading spinner/text to hide the loading phase
-        return <div className="min-h-screen bg-gray-50 dark:bg-gray-900"></div>;
+        return (
+            <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center">
+                <svg className="animate-spin h-10 w-10 text-blue-600 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-200">Connecting to Database...</h2>
+                <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Loading your profile data</p>
+            </div>
+        );
     }
 
     if (isUpdatingPassword) {
@@ -1273,6 +1293,102 @@ const { data, error } = await supabase
             showNotification("Password updated successfully. Please sign in again.");
             handleLogout();
         }} />;
+    }
+
+    if (connectionError) {
+        return (
+            <div className="font-sans min-h-screen relative overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 transition-colors duration-300">
+                {/* Background Image of Campus with Ken Burns effect */}
+                <div 
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.16] dark:opacity-[0.10] transition-opacity duration-300 scale-105 animate-ken-burns"
+                    style={{ backgroundImage: "url('/university_campus.png')" }}
+                ></div>
+                {/* Moving grid */}
+                <div className="absolute inset-0 bg-grid-pattern animate-grid-drift"></div>
+                {/* Moving blur blobs */}
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 dark:bg-blue-900/10 blur-[120px] animate-blob1"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-900/10 blur-[120px] animate-blob2"></div>
+
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
+                    <div className="relative w-full max-w-md p-8 sm:p-10 text-center backdrop-blur-xl bg-white/50 dark:bg-gray-950/50 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-red-500 before:to-pink-500 before:rounded-t-3xl">
+                        <div className="w-16 h-16 rounded-full bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-6">
+                            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-white">Connection Error</h2>
+                        <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                            {connectionError}
+                        </p>
+                        <button 
+                            onClick={() => {
+                                if (session) {
+                                    setConnectionError(null);
+                                    fetchData(session.user);
+                                } else {
+                                    handleLogout();
+                                }
+                            }}
+                            className="mt-6 w-full flex items-center justify-center py-3.5 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 shadow-lg shadow-red-500/20 active:scale-[0.99] hover:scale-[1.01] transition-all duration-200"
+                        >
+                            Retry Connection
+                        </button>
+                        <button 
+                            onClick={handleLogout}
+                            className="mt-4 text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                        >
+                            Go Back to Sign In
+                        </button>
+                    </div>
+                </div>
+                <style>{`
+                    @keyframes grid-drift {
+                        0% { background-position: 0 0; }
+                        100% { background-position: 40px 40px; }
+                    }
+                    .animate-grid-drift {
+                        animation: grid-drift 20s linear infinite;
+                    }
+                    @keyframes ken-burns {
+                        0% { transform: scale(1.05) translate(0px, 0px); }
+                        50% { transform: scale(1.12) translate(8px, -8px); }
+                        100% { transform: scale(1.05) translate(0px, 0px); }
+                    }
+                    .animate-ken-burns {
+                        animation: ken-burns 45s ease-in-out infinite;
+                    }
+                    @keyframes blob1 {
+                        0% { transform: translate(0px, 0px) scale(1); }
+                        33% { transform: translate(30px, -40px) scale(1.1); }
+                        66% { transform: translate(-20px, 20px) scale(0.95); }
+                        100% { transform: translate(0px, 0px) scale(1); }
+                    }
+                    @keyframes blob2 {
+                        0% { transform: translate(0px, 0px) scale(1); }
+                        33% { transform: translate(-40px, 30px) scale(0.9); }
+                        66% { transform: translate(30px, -20px) scale(1.05); }
+                        100% { transform: translate(0px, 0px) scale(1); }
+                    }
+                    .animate-blob1 {
+                        animation: blob1 25s infinite ease-in-out;
+                    }
+                    .animate-blob2 {
+                        animation: blob2 20s infinite ease-in-out;
+                    }
+                    .bg-grid-pattern {
+                        background-size: 40px 40px;
+                        background-image: 
+                            linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+                    }
+                    .dark .bg-grid-pattern {
+                        background-image: 
+                            linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+                    }
+                `}</style>
+            </div>
+        );
     }
 
     return (
