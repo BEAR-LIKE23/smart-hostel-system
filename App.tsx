@@ -1300,11 +1300,10 @@ const { data, error } = await supabase
             <div className="font-sans min-h-screen relative overflow-hidden bg-gray-50 dark:bg-gray-950 text-gray-800 dark:text-gray-100 transition-colors duration-300">
                 {/* Background Image of Campus with Ken Burns effect */}
                 <div 
-                    className="absolute inset-0 bg-cover bg-center opacity-[0.16] dark:opacity-[0.10] transition-opacity duration-300 scale-105 animate-ken-burns"
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.85] dark:opacity-[0.85] transition-opacity duration-300 scale-105 animate-ken-burns"
                     style={{ backgroundImage: "url('/university_campus.png')" }}
                 ></div>
-                {/* Moving grid */}
-                <div className="absolute inset-0 bg-grid-pattern animate-grid-drift"></div>
+                {/* Moving grid removed as requested */}
                 {/* Moving blur blobs */}
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 dark:bg-blue-900/10 blur-[120px] animate-blob1"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-900/10 blur-[120px] animate-blob2"></div>
@@ -1397,11 +1396,10 @@ const { data, error } = await supabase
             <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
                 {/* Background Image of Campus with Ken Burns effect */}
                 <div 
-                    className="absolute inset-0 bg-cover bg-center opacity-[0.16] dark:opacity-[0.10] transition-opacity duration-300 scale-105 animate-ken-burns"
+                    className="absolute inset-0 bg-cover bg-center opacity-[0.85] dark:opacity-[0.85] transition-opacity duration-300 scale-105 animate-ken-burns"
                     style={{ backgroundImage: "url('/university_campus.png')" }}
                 ></div>
-                {/* Moving grid */}
-                <div className="absolute inset-0 bg-grid-pattern animate-grid-drift"></div>
+                {/* Moving grid removed as requested */}
                 {/* Moving blur blobs */}
                 <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 dark:bg-blue-900/10 blur-[120px] animate-blob1"></div>
                 <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 dark:bg-purple-900/10 blur-[120px] animate-blob2"></div>
