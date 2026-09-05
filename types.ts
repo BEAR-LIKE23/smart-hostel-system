@@ -51,6 +51,69 @@ export interface MaintenanceRequest {
 }
 
 
+// NEW: Added GatePass interface
+export interface GatePass {
+    id: number;
+    created_at: string;
+    student_id: string;
+    student_name: string;
+    room_number: string;
+    departure_date: string;
+    return_date: string;
+    reason: string;
+    destination: string;
+    parent_contact: string;
+    status: 'Pending' | 'Approved' | 'Rejected';
+    approved_by?: string;
+    approved_at?: string;
+}
+
+// NEW: Added PaymentRecord interface
+export interface PaymentRecord {
+    id: number;
+    created_at: string;
+    student_id: string;
+    student_name: string;
+    room_number: string;
+    academic_year: string;
+    semester: '1st Semester' | '2nd Semester' | 'Full Session';
+    amount: number;
+    status: 'Paid' | 'Pending' | 'Overdue';
+    payment_date?: string;
+    receipt_number: string;
+    payment_method?: 'Card' | 'Bank Transfer' | 'Cash' | 'Online';
+}
+
+// NEW: Added Notification interface
+export interface HostelNotification {
+    id: string;
+    created_at: string;
+    title: string;
+    message: string;
+    type: 'announcement' | 'complaint' | 'maintenance' | 'gatepass' | 'payment' | 'info';
+    read: boolean;
+    student_id?: string; // null/undefined means broadcast to all
+}
+
 // FIX: Added back the announcement modal types
-// NEW: Added maintenance modal types
-export type ModalType = 'view' | 'viewComplaints' | 'submitComplaint' | 'roomOccupancy' | 'assignRoom' | 'viewRoommates' | 'addRoom' | 'studentProfile' | 'editProfile' | 'postAnnouncement' | 'viewAnnouncements' | 'submitMaintenance' | 'viewMaintenance' | null;
+// NEW: Added maintenance, gatepass, payment, and notification modal types
+export type ModalType = 
+  | 'view' 
+  | 'viewComplaints' 
+  | 'submitComplaint' 
+  | 'roomOccupancy' 
+  | 'assignRoom' 
+  | 'viewRoommates' 
+  | 'addRoom' 
+  | 'studentProfile' 
+  | 'editProfile' 
+  | 'postAnnouncement' 
+  | 'viewAnnouncements' 
+  | 'submitMaintenance' 
+  | 'viewMaintenance'
+  | 'requestGatePass'
+  | 'viewGatePasses'
+  | 'viewPaymentReceipt'
+  | 'managePayments'
+  | 'viewNotifications'
+  | null;

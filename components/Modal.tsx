@@ -5,24 +5,25 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  maxWidth?: string;
 }
 
 // FIX: Explicitly type the component as React.FC<ModalProps> to help TypeScript correctly parse JSX children.
 // This resolves the error in App.tsx where the 'children' prop was not being recognized.
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, maxWidth = 'max-w-md' }) => {
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div 
-        className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md m-4 p-6 relative animate-fade-in-down"
+        className={`bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full ${maxWidth} m-auto p-6 relative animate-fade-in-down max-h-[90vh] flex flex-col border border-gray-100 dark:border-gray-700`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">{title}</h3>
+        <div className="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100">{title}</h3>
           <button 
             onClick={onClose} 
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"

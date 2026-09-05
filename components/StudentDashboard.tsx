@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Student, Complaint, Room } from '../types';
+import { Student, Complaint, Room, GatePass, PaymentRecord, HostelNotification } from '../types';
 
 interface StudentDashboardProps {
   student: Student | null | undefined;
   complaints: Complaint[];
+  gatePasses?: GatePass[];
+  paymentRecord?: PaymentRecord | null;
+  unreadNotificationsCount?: number;
   onLogout: () => void;
   onSubmitComplaint: () => void;
   onViewComplaints: () => void;
@@ -11,6 +14,10 @@ interface StudentDashboardProps {
   onViewAnnouncements: () => void;
   onEditProfile: () => void;
   onSubmitMaintenance: () => void;
+  onRequestGatePass: () => void;
+  onViewGatePasses: () => void;
+  onViewPaymentReceipt: () => void;
+  onViewNotifications: () => void;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   onUploadAvatar: (file: File) => Promise<void>;
@@ -19,6 +26,9 @@ interface StudentDashboardProps {
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ 
   student, 
   complaints, 
+  gatePasses = [],
+  paymentRecord,
+  unreadNotificationsCount = 0,
   onLogout, 
   onSubmitComplaint, 
   onViewComplaints, 
@@ -26,6 +36,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
   onViewAnnouncements, 
   onEditProfile, 
   onSubmitMaintenance, 
+  onRequestGatePass,
+  onViewGatePasses,
+  onViewPaymentReceipt,
+  onViewNotifications,
   theme, 
   toggleTheme, 
   onUploadAvatar 
@@ -70,6 +84,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const room = student.rooms;
   const pendingComplaints = complaints.filter(c => c.status !== 'Resolved').length;
+  const activePass = gatePasses.length > 0 ? gatePasses[0] : null;
 
   // Shared classes
   const actionBtnClass = "group relative w-full flex items-center justify-center p-4 rounded-xl font-bold transition-all duration-300 ease-in-out transform hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/10 disabled:from-gray-300/40 disabled:to-gray-300/40 disabled:text-gray-400 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none dark:disabled:from-gray-800/40 dark:disabled:to-gray-800/40 dark:disabled:text-gray-500 dark:focus:ring-offset-gray-950";
@@ -81,6 +96,18 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
             
             {/* Top Controls */}
             <div className="absolute top-6 right-6 flex items-center gap-2">
+                 <button 
+                    onClick={onViewNotifications} 
+                    className="relative p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 rounded-lg transition-colors" 
+                    title="Notifications"
+                 >
+                    <BellIcon />
+                    {unreadNotificationsCount > 0 && (
+                        <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-950">
+                            {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                        </span>
+                    )}
+                </button>
                  <button onClick={onEditProfile} className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 rounded-lg transition-colors" title="Edit Profile">
                     <EditIcon />
                 </button>
@@ -171,11 +198,60 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 </div>
             </div>
 
+            {/* Quick Status Badges (Fees & Gate Pass) */}
+            <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Fee Status */}
+                <div className="p-3.5 rounded-2xl bg-white/40 dark:bg-black/20 border border-white/40 dark:border-gray-800/30 flex items-center justify-between text-left">
+                    <div className="flex items-center space-x-3">
+                        <div className={`p-2 rounded-xl ${paymentRecord?.status === 'Paid' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400'}`}>
+                            <CreditCardIcon />
+                        </div>
+                        <div>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Hostel Dues</span>
+                            <span className={`text-xs font-black ${paymentRecord?.status === 'Paid' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                                {paymentRecord?.status === 'Paid' ? '✓ Fees Paid in Full' : '⏳ Pending Payment'}
+                            </span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={onViewPaymentReceipt}
+                        className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/30"
+                    >
+                        {paymentRecord?.status === 'Paid' ? 'Receipt' : 'Invoice'}
+                    </button>
+                </div>
+
+                {/* Gate Pass Status */}
+                <div className="p-3.5 rounded-2xl bg-white/40 dark:bg-black/20 border border-white/40 dark:border-gray-800/30 flex items-center justify-between text-left">
+                    <div className="flex items-center space-x-3">
+                        <div className="p-2 rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-400">
+                            <IdentificationIcon />
+                        </div>
+                        <div>
+                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider block">Digital Out-Pass</span>
+                            <span className="text-xs font-black text-gray-800 dark:text-gray-200">
+                                {activePass ? `${activePass.status} (${activePass.destination})` : 'No Active Pass'}
+                            </span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={onViewGatePasses}
+                        className="text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/30"
+                    >
+                        Passes ({gatePasses.length})
+                    </button>
+                </div>
+            </div>
+
             {/* Quick Actions Panel */}
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button onClick={onViewAnnouncements} className={actionBtnClass}>
                     <MegaphoneIcon />
                     <span className="ml-3">View Announcements</span>
+                </button>
+                <button onClick={onRequestGatePass} className={actionBtnClass}>
+                    <IdentificationIcon />
+                    <span className="ml-3">Request Gate Pass</span>
                 </button>
                 <button onClick={onViewComplaints} className={`${actionBtnClass} relative`}>
                     <ClipboardListIcon />
@@ -193,6 +269,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                 <button onClick={onSubmitMaintenance} disabled={!room} className={actionBtnClass}>
                     <WrenchScrewdriverIcon />
                     <span className="ml-3">Request Maintenance</span>
+                </button>
+                <button onClick={onViewPaymentReceipt} className={actionBtnClass}>
+                    <CreditCardIcon />
+                    <span className="ml-3">Hostel Fee Receipt</span>
                 </button>
             </div>
 
@@ -267,5 +347,8 @@ const EditIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-
 const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
 const WrenchScrewdriverIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>;
 const CameraIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>;
+const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
+const IdentificationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2H9.17A3.001 3.001 0 0112 14z" /></svg>;
+const CreditCardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
 
 export default StudentDashboard;

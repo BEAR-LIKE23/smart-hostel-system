@@ -1,27 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 
-// --- DATABASE CONFIGURATION ---
-// Please replace the placeholder values below with your actual Supabase credentials.
-// You can find these in your Supabase project's API settings.
+// Read configuration from Vite environment variables or fallback values
+const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const envSupabaseKey = import.meta.env.VITE_SUPABASE_KEY;
+const envGoogleApiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
-// FIX: Explicitly type constants as `string` to prevent TypeScript from inferring a too-specific literal type,
-// which causes an error when comparing against the placeholder string literal.
-const supabaseUrl: string = "https://cyzstcawibjckrijprcy.supabase.co";
-const supabaseKey: string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5enN0Y2F3aWJqY2tyaWpwcmN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODA1ODAsImV4cCI6MjA5NTQ1NjU4MH0.qb_Dtik5fRW-x3XR_6qDHJkvuSZ1tuV4zdxa3WuNkko";
-const apiKey: string = "AIzaSyDANyz6Uox_MLGrBEHRLRfO7t2F4P9WUx8";
-// --- DO NOT EDIT BELOW THIS LINE ---
+const supabaseUrl: string = envSupabaseUrl || "https://cyzstcawibjckrijprcy.supabase.co";
+const supabaseKey: string = envSupabaseKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN5enN0Y2F3aWJqY2tyaWpwcmN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4ODA1ODAsImV4cCI6MjA5NTQ1NjU4MH0.qb_Dtik5fRW-x3XR_6qDHJkvuSZ1tuV4zdxa3WuNkko";
 
-// This check verifies that you have replaced the placeholder values.
+export const googleApiKey: string = envGoogleApiKey || "AIzaSyDANyz6Uox_MLGrBEHRLRfO7t2F4P9WUx8";
+
 const areCredentialsSet = 
+  Boolean(supabaseUrl) && 
+  Boolean(supabaseKey) && 
   supabaseUrl !== "YOUR_SUPABASE_URL_HERE" && 
-  supabaseKey !== "YOUR_SUPABASE_KEY_HERE" && apiKey !== "YOUR_API_KEY_HERE"; 
+  supabaseKey !== "YOUR_SUPABASE_KEY_HERE";
 
 if (!areCredentialsSet) {
-    console.error("SETUP REQUIRED: Supabase credentials are still placeholders. Please update supabaseClient.ts with your actual URL and Key.");
+    console.error("SETUP REQUIRED: Supabase credentials are missing or still placeholders. Please update .env or supabaseClient.ts.");
 }
 
 // Export a SupabaseClient instance if configured, otherwise export null.
-// The main App component will see `null` and show a helpful setup screen.
 export const supabase = areCredentialsSet
   ? createClient(supabaseUrl, supabaseKey)
-  : null;
+  : null;

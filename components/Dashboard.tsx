@@ -10,12 +10,18 @@ interface AdminDashboardProps {
   onAddRoom: () => void;
   onPostAnnouncement: () => void;
   onViewMaintenance: () => void;
+  onManageGatePasses: () => void;
+  onManagePayments: () => void;
+  onViewNotifications: () => void;
   isAllocating: boolean;
   totalStudents: number;
   assignedStudents: number;
   occupancyPercentage: number;
   pendingComplaints: number;
   pendingMaintenance: number;
+  pendingGatePasses?: number;
+  paidStudentsCount?: number;
+  unreadNotificationsCount?: number;
   theme: 'light' | 'dark';
   toggleTheme: () => void;
 }
@@ -30,13 +36,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onAddRoom, 
     onPostAnnouncement,
     onViewMaintenance,
+    onManageGatePasses,
+    onManagePayments,
+    onViewNotifications,
     isAllocating,
     totalStudents,
     assignedStudents,
     occupancyPercentage,
     pendingComplaints,
     pendingMaintenance,
-    theme,
+    pendingGatePasses = 0,
+    paidStudentsCount = 0,
+    unreadNotificationsCount = 0,
+    theme, 
     toggleTheme,
 }) => {
   return (
@@ -45,7 +57,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="relative backdrop-blur-xl bg-white/60 dark:bg-gray-950/60 rounded-[2rem] shadow-[0_20px_60px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] p-8 sm:p-12 border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-2 before:bg-gradient-to-r before:from-indigo-500 before:via-purple-500 before:to-pink-500 before:rounded-t-[2rem]">
             
             {/* Header Section */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 relative z-10">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 relative z-10">
                 <div>
                     <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 tracking-tight">
                         Admin Command Center
@@ -55,13 +67,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         Welcome back, <span className="text-gray-700 dark:text-gray-300 ml-1 font-semibold">{username}</span>
                     </p>
                 </div>
-                <div className="mt-6 sm:mt-0">
+                <div className="mt-6 sm:mt-0 flex items-center gap-3">
+                    <button 
+                        onClick={onViewNotifications}
+                        className="relative p-3 rounded-full bg-white/50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:shadow-md hover:scale-105 transition-all focus:outline-none"
+                        title="Notifications"
+                    >
+                        <BellIcon />
+                        {unreadNotificationsCount > 0 && (
+                            <span className="absolute top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
+                                {unreadNotificationsCount > 9 ? '9+' : unreadNotificationsCount}
+                            </span>
+                        )}
+                    </button>
                     <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
                 </div>
             </div>
             
             {/* Analytics Panel */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-10">
                 <StatCard 
                     title="Total Students" 
                     value={totalStudents} 
@@ -70,25 +94,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     delay="0"
                 />
                 <StatCard 
-                    title="Room Occupancy" 
+                    title="Occupancy" 
                     value={`${occupancyPercentage}%`} 
                     icon={<ChartPieIcon />} 
                     color="indigo"
-                    delay="100"
+                    delay="50"
                 />
                 <StatCard 
-                    title="Pending Complaints" 
+                    title="Complaints" 
                     value={pendingComplaints} 
                     icon={<ExclamationCircleIcon />} 
                     color="amber"
-                    delay="200"
+                    delay="100"
                 />
                 <StatCard 
-                    title="Pending Requests" 
+                    title="Maintenance" 
                     value={pendingMaintenance} 
                     icon={<WrenchScrewdriverIconSolid />} 
                     color="rose"
-                    delay="300"
+                    delay="150"
+                />
+                <StatCard 
+                    title="Pending Passes" 
+                    value={pendingGatePasses} 
+                    icon={<IdentificationIconSolid />} 
+                    color="purple"
+                    delay="200"
+                />
+                <StatCard 
+                    title="Fees Paid" 
+                    value={`${paidStudentsCount}/${totalStudents || 0}`} 
+                    icon={<CreditCardIconSolid />} 
+                    color="teal"
+                    delay="250"
                 />
             </div>
 
@@ -96,12 +134,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="mb-6">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200 mb-6 flex items-center">
                     <svg className="w-6 h-6 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                    Quick Actions
+                    Quick Operations
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <DashboardButton onClick={onViewStudents} text="Manage Students" icon={<UsersIcon />} color="indigo" />
-                    <DashboardButton onClick={onViewComplaints} text="Resolve Complaints" icon={<ClipboardListIcon />} color="amber" />
-                    <DashboardButton onClick={onViewMaintenance} text="Maintenance Hub" icon={<WrenchScrewdriverIcon />} color="rose" />
+                    <DashboardButton onClick={onViewComplaints} text="Complaints Hub" icon={<ClipboardListIcon />} color="amber" badge={pendingComplaints > 0 ? `${pendingComplaints}` : undefined} />
+                    <DashboardButton onClick={onViewMaintenance} text="Maintenance Hub" icon={<WrenchScrewdriverIcon />} color="rose" badge={pendingMaintenance > 0 ? `${pendingMaintenance}` : undefined} />
+                    <DashboardButton onClick={onManageGatePasses} text="Gate Pass Approvals" icon={<IdentificationIcon />} color="purple" badge={pendingGatePasses > 0 ? `${pendingGatePasses}` : undefined} />
+                    <DashboardButton onClick={onManagePayments} text="Hostel Fee Tracker" icon={<CreditCardIcon />} color="teal" />
                     <DashboardButton onClick={onRoomOccupancy} text="Room Occupancy" icon={<HomeIcon />} color="blue" />
                     <DashboardButton onClick={onAddRoom} text="Add New Room" icon={<PlusCircleIcon />} color="teal" />
                     <DashboardButton onClick={onPostAnnouncement} text="Post Announcement" icon={<MegaphoneIcon />} color="purple" />
@@ -188,9 +228,10 @@ interface DashboardButtonProps {
     text: string;
     icon: React.ReactNode;
     color: string;
+    badge?: string;
 }
 
-const DashboardButton: React.FC<DashboardButtonProps> = ({ onClick, text, icon, color }) => {
+const DashboardButton: React.FC<DashboardButtonProps> = ({ onClick, text, icon, color, badge }) => {
     const hoverStyles = {
         blue: 'hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700/50 hover:text-blue-700 dark:hover:text-blue-400 hover:shadow-blue-500/10',
         indigo: 'hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:border-indigo-300 dark:hover:border-indigo-700/50 hover:text-indigo-700 dark:hover:text-indigo-400 hover:shadow-indigo-500/10',
@@ -212,13 +253,18 @@ const DashboardButton: React.FC<DashboardButtonProps> = ({ onClick, text, icon, 
     return (
         <button 
             onClick={onClick} 
-            className={`group w-full flex items-center p-5 rounded-2xl font-bold transition-all duration-300 ease-in-out transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color}-500 bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 shadow-sm hover:shadow-lg ${hoverStyles}`}
+            className={`group relative w-full flex items-center p-4 rounded-2xl font-bold transition-all duration-300 ease-in-out transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-${color}-500 bg-white dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 shadow-sm hover:shadow-lg ${hoverStyles}`}
         >
-            <div className={`p-3 rounded-xl bg-gray-50 dark:bg-gray-900/50 transition-colors duration-300 group-hover:bg-transparent ${iconColors}`}>
+            <div className={`p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900/50 transition-colors duration-300 group-hover:bg-transparent ${iconColors}`}>
                 {icon}
             </div>
-            <span className="ml-4 text-left">{text}</span>
-            <svg className={`w-5 h-5 ml-auto opacity-0 -translate-x-4 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 ${iconColors}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
+            <span className="ml-3 text-left text-sm">{text}</span>
+            {badge && (
+                <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-[11px] font-extrabold leading-none text-white bg-red-500 rounded-full animate-pulse">
+                    {badge}
+                </span>
+            )}
+            <svg className={`w-4 h-4 ml-auto opacity-0 -translate-x-3 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0 ${iconColors}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7"></path></svg>
         </button>
     );
 };
@@ -242,18 +288,23 @@ const ThemeToggle: React.FC<{ theme: 'light' | 'dark'; toggleTheme: () => void }
 
 // --- ICONS ---
 
-const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.975 5.975 0 0112 13a5.975 5.975 0 013 5.197" /></svg>;
-const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
-const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
+const UsersIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.975 5.975 0 0112 13a5.975 5.975 0 013 5.197" /></svg>;
+const ClipboardListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>;
+const HomeIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>;
 const KeyIcon = ({ className = "w-6 h-6" }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" /></svg>;
-const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
+const PlusCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
 const LogoutIcon = ({ className = "w-6 h-6" }: { className?: string }) => <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
-const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
-const WrenchScrewdriverIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>;
+const MegaphoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V4a2 2 0 012-2h2a2 2 0 012 2v1.882l2.683 2.683a2 2 0 01.536 2.455l-1.887 6.602a2 2 0 01-1.93 1.378H4.6a2 2 0 01-1.93-1.378L.783 12.9a2 2 0 01.536-2.455L3.9 7.765l2.683-2.683L11 5.882z" /></svg>;
+const WrenchScrewdriverIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>;
+const BellIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>;
+const IdentificationIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2H9.17A3.001 3.001 0 0112 14z" /></svg>;
+const CreditCardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>;
 
-const UsersIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zm-3 2a5 5 0 00-5 5v1a1 1 0 001 1h8a1 1 0 001-1v-1a5 5 0 00-5-5zM16 6a3 3 0 11-6 0 3 3 0 016 0zm-3 2a5 5 0 00-4.545 3.372A3.998 3.998 0 0115 11a4 4 0 010 8h1a1 1 0 001-1v-1a5 5 0 00-5-5z" /></svg>;
-const ChartPieIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>;
-const ExclamationCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>;
-const WrenchScrewdriverIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17a.75.75 0 01.447.882l-1 4.5a.75.75 0 01-1.341-.298l1-4.5a.75.75 0 01.894-.584zM8.51 3.17a.75.75 0 01.894.584l-1 4.5a.75.75 0 01-1.341-.298l1-4.5a.75.75 0 01.447-.882zM6 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 016 7.5zM14 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0114 7.5zM10 9a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 9z" clipRule="evenodd" /><path d="M3 9.322c0-1.344 1.253-2.14 2.49-1.585l.18.081c.54.242.9.782.9 1.369v.302c0 .587-.36 1.127-.9 1.369l-.18.081C4.253 11.462 3 10.666 3 9.322zM17 9.322c0-1.344-1.253-2.14-2.49-1.585l-.18.081c-.54.242-.9.782-.9 1.369v.302c0 .587.36 1.127.9 1.369l.18.081c1.237.555 2.49-.24 2.49-1.585zM8.377 12.44a.75.75 0 00-1.06 1.06l1.25 1.25a.75.75 0 101.06-1.06l-1.25-1.25zM11.623 12.44a.75.75 0 011.06 1.06l-1.25 1.25a.75.75 0 01-1.06-1.06l1.25-1.25z" /><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM2 10a8 8 0 1116 0 8 8 0 01-16 0z" clipRule="evenodd" /></svg>;
+const UsersIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zm-3 2a5 5 0 00-5 5v1a1 1 0 001 1h8a1 1 0 001-1v-1a5 5 0 00-5-5zM16 6a3 3 0 11-6 0 3 3 0 016 0zm-3 2a5 5 0 00-4.545 3.372A3.998 3.998 0 0115 11a4 4 0 010 8h1a1 1 0 001-1v-1a5 5 0 00-5-5z" /></svg>;
+const ChartPieIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z" /><path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z" /></svg>;
+const ExclamationCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>;
+const WrenchScrewdriverIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M11.49 3.17a.75.75 0 01.447.882l-1 4.5a.75.75 0 01-1.341-.298l1-4.5a.75.75 0 01.894-.584zM8.51 3.17a.75.75 0 01.894.584l-1 4.5a.75.75 0 01-1.341-.298l1-4.5a.75.75 0 01.447-.882zM6 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 016 7.5zM14 7.5a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0114 7.5zM10 9a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 9z" clipRule="evenodd" /><path d="M3 9.322c0-1.344 1.253-2.14 2.49-1.585l.18.081c.54.242.9.782.9 1.369v.302c0 .587-.36 1.127-.9 1.369l-.18.081C4.253 11.462 3 10.666 3 9.322zM17 9.322c0-1.344-1.253-2.14-2.49-1.585l-.18.081c-.54.242-.9.782-.9 1.369v.302c0 .587.36 1.127.9 1.369l.18.081c1.237.555 2.49-.24 2.49-1.585zM8.377 12.44a.75.75 0 00-1.06 1.06l1.25 1.25a.75.75 0 101.06-1.06l-1.25-1.25zM11.623 12.44a.75.75 0 011.06 1.06l-1.25 1.25a.75.75 0 01-1.06-1.06l1.25-1.25z" /><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM2 10a8 8 0 1116 0 8 8 0 01-16 0z" clipRule="evenodd" /></svg>;
+const IdentificationIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 016 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 00-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm1 4a1 1 0 011-1h1a1 1 0 110 2h-1a1 1 0 01-1-1z" clipRule="evenodd" /></svg>;
+const CreditCardIconSolid = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" /><path fillRule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clipRule="evenodd" /></svg>;
 
 export default AdminDashboard;
