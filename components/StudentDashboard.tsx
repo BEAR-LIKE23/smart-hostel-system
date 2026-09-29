@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Student, Complaint, Room, GatePass, PaymentRecord, HostelNotification } from '../types';
+import Logo from './Logo';
 
 interface StudentDashboardProps {
   student: Student | null | undefined;
@@ -94,8 +95,10 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
       <div className="w-full max-w-2xl">
         <div className="relative backdrop-blur-xl bg-white/50 dark:bg-gray-950/50 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-8 sm:p-10 border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-blue-500 before:to-indigo-500 before:rounded-t-3xl">
             
-            {/* Top Controls */}
-            <div className="absolute top-6 right-6 flex items-center gap-2">
+            {/* Top Branding & Controls */}
+            <div className="flex items-center justify-between mb-4">
+                <Logo size="xs" badgeText="Resident Hub" />
+                <div className="flex items-center gap-2">
                  <button 
                     onClick={onViewNotifications} 
                     className="relative p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100/50 dark:hover:bg-gray-800/50 rounded-lg transition-colors" 
@@ -112,6 +115,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({
                     <EditIcon />
                 </button>
                 <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
+                </div>
             </div>
             
             {/* Profile Header */}

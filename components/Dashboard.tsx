@@ -1,4 +1,5 @@
 import React from 'react';
+import Logo from './Logo';
 
 interface AdminDashboardProps {
   username: string;
@@ -59,6 +60,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 relative z-10">
                 <div>
+                    <div className="mb-2">
+                        <Logo size="sm" badgeText="Admin Suite" />
+                    </div>
                     <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400 tracking-tight">
                         Admin Command Center
                     </h1>

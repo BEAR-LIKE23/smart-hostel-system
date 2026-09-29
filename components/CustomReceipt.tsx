@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PaymentRecord, Student } from '../types';
+import { LogoIcon } from './Logo';
 
 interface CustomReceiptProps {
   payment: PaymentRecord | null;
@@ -85,22 +86,20 @@ export const CustomReceipt: React.FC<CustomReceiptProps> = ({ payment, student, 
         {/* Security Watermark Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none flex items-center justify-center select-none overflow-hidden">
           <span className="text-[120px] font-black tracking-widest text-indigo-950 dark:text-white rotate-[-30deg]">
-            HOSTELHUB
+            SMARTHOSTEL
           </span>
         </div>
 
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-6 border-b border-dashed border-gray-200 dark:border-gray-800 relative z-10 gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-blue-500 text-white flex items-center justify-center font-black text-2xl shadow-lg shadow-indigo-500/20 border-2 border-white dark:border-gray-800">
-              🏛️
-            </div>
+            <LogoIcon sizeClass="w-14 h-14" />
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">HOSTELHUB</h2>
+                <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight">SMARTHOSTEL</h2>
                 <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">Official</span>
               </div>
-              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Student Accommodation & Bursary Services</p>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400">Student Accommodation &amp; Bursary Services</p>
               <p className="text-[10px] text-gray-400 font-mono">Central Campus Residential Authority</p>
             </div>
           </div>

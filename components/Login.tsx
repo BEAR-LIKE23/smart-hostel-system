@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { LogoIcon } from './Logo';
 
 interface LoginProps {
   onBack?: () => void;
@@ -192,7 +193,8 @@ const Login: React.FC<LoginProps> = ({ onBack, initialView = 'signin' }) => {
     return (
        <div className="min-h-screen flex items-center justify-center bg-transparent p-4 transition-colors duration-300">
         <div className="relative w-full max-w-md p-8 sm:p-10 space-y-8 backdrop-blur-xl bg-white/50 dark:bg-gray-950/50 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-white/60 dark:border-gray-800/60 before:absolute before:top-0 before:left-0 before:right-0 before:h-1.5 before:bg-gradient-to-r before:from-blue-500 before:to-indigo-500 before:rounded-t-3xl">
-            <div className="text-center">
+            <div className="text-center flex flex-col items-center">
+                <LogoIcon sizeClass="w-12 h-12" className="mb-3" />
                 <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Check Your Email</h1>
                 <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">We've sent a 6-digit verification code to <strong className="font-semibold text-gray-700 dark:text-gray-200">{email}</strong>.</p>
             </div>
@@ -248,7 +250,8 @@ const Login: React.FC<LoginProps> = ({ onBack, initialView = 'signin' }) => {
               Back to Home
             </button>
           )}
-          <div className="text-center">
+          <div className="text-center flex flex-col items-center">
+            <LogoIcon sizeClass="w-12 h-12" className="mb-3" />
             <h1 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">Reset Password</h1>
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">Enter your email to receive reset instructions.</p>
           </div>
@@ -287,7 +290,8 @@ const Login: React.FC<LoginProps> = ({ onBack, initialView = 'signin' }) => {
           </button>
         )}
         
-        <div className="text-center">
+        <div className="text-center flex flex-col items-center">
+            <LogoIcon sizeClass="w-12 h-12" className="mb-3" />
             <h1 className="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
               {view === 'signup' ? 'Create Account' : 'Hostel Login'}
             </h1>

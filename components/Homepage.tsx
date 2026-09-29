@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Logo from './Logo';
 
 interface HomePageProps {
     /** Function to call when the user clicks 'Enter Portal' or 'Sign In' */
@@ -91,14 +92,7 @@ const HomePage: React.FC<HomePageProps> = ({ onEnterApp, theme, toggleTheme }) =
             {/* Navigation Bar */}
             <header className="sticky top-0 z-50 backdrop-blur-md bg-white/70 dark:bg-gray-950/70 border-b border-gray-200/50 dark:border-gray-800/50 transition-colors">
                 <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center space-x-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold shadow-md shadow-blue-500/20">
-                            H
-                        </div>
-                        <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                            SmartHostel
-                        </span>
-                    </div>
+                    <Logo size="md" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} />
 
                     <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600 dark:text-gray-300">
                         <button onClick={() => scrollToSection('features')} className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Features</button>
@@ -329,14 +323,7 @@ const HomePage: React.FC<HomePageProps> = ({ onEnterApp, theme, toggleTheme }) =
             {/* Footer */}
             <footer className="border-t border-gray-200/50 dark:border-gray-800/50 bg-white dark:bg-gray-950 transition-colors py-12">
                 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-6 h-6 rounded-md bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-extrabold text-xs">
-                            H
-                        </div>
-                        <span className="text-base font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-400 dark:to-indigo-400">
-                            SmartHostel
-                        </span>
-                    </div>
+                    <Logo size="sm" />
 
                     <div className="text-sm text-gray-400 dark:text-gray-500 text-center md:text-right">
                         © {new Date().getFullYear()} Smart Hostel Allocation & Management System. All rights reserved.

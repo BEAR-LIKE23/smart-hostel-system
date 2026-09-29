@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 60" fill="none">
+  <defs>
+    <linearGradient id="hostelGradMain" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="50%" stop-color="#4f46e5" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+    <linearGradient id="hostelTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e40af" />
+      <stop offset="100%" stop-color="#4338ca" />
+    </linearGradient>
+    <linearGradient id="accentLine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+
+  <!-- Logo Icon Container -->
+  <rect x="6" y="6" width="48" height="48" rx="14" fill="url(#hostelGradMain)" />
+  
+  <!-- Architectural Gable / Roof -->
+  <path d="M18 24 L30 15 L42 24" stroke="#93c5fd" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" />
+  
+  <!-- Columns (H) -->
+  <path d="M22 25 V42 M38 25 V42" stroke="#ffffff" stroke-width="4" stroke-linecap="round" />
+  
+  <!-- Center Bridge -->
+  <path d="M22 33 H38" stroke="url(#accentLine)" stroke-width="3.5" stroke-linecap="round" />
+  
+  <!-- Smart Node -->
+  <circle cx="30" cy="33" r="3" fill="#ffffff" />
+  <circle cx="30" cy="33" r="1.5" fill="#4f46e5" />
+  
+  <!-- Window Dot -->
+  <circle cx="30" cy="22" r="2" fill="#ffffff" fill-opacity="0.9" />
+
+  <!-- Text -->
+  <text x="66" y="34" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="22" fill="#1e293b" letter-spacing="-0.5">Smart<tspan fill="#4f46e5">Hostel</tspan></text>
+  <text x="67" y="47" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="600" font-size="9" fill="#64748b" letter-spacing="0.5">ALLOCATION &amp; MANAGEMENT</text>
+</svg>
